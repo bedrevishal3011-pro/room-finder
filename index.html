@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="utf-8">
+<title>Room Finder – विद्यार्थ्यांसाठी रूम</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700&family=Noto+Serif+Devanagari:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--ink:#12202f;--mut:#566474;--paper:#f4f6f8;--card:#fff;--bd:#d9e0e7;--pri:#0e5a8a;--pri-d:#0a4568;--saf:#8a5a00;--saf-bg:#fff2d4;--ok:#1e7b4f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.6 "Mukta",system-ui,sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:0 18px}
+header{background:var(--card);border-bottom:1px solid var(--bd)}
+.bar{display:flex;justify-content:space-between;align-items:center;height:60px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:1.15rem;color:var(--ink);text-decoration:none}
+.brand svg{width:26px;height:26px}
+.hero{background:var(--pri);color:#fff;padding:34px 0 30px}
+.hero h1{font:700 clamp(1.5rem,4.4vw,2.1rem)/1.3 "Noto Serif Devanagari",serif;margin:0 0 8px;max-width:20em}
+.hero p{margin:0 0 20px;color:#d6e6f2;max-width:34em}
+.search{background:var(--card);border-radius:10px;padding:14px;color:var(--ink)}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 160px}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--bd);border-radius:7px;background:#fff;color:var(--ink);font:inherit}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #7fb4d8;outline-offset:1px}
+button,.btn{background:var(--pri);color:#fff;border:1px solid var(--pri);border-radius:7px;padding:10px 16px;font:600 .95rem "Mukta",sans-serif;cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
+button:hover,.btn:hover{background:var(--pri-d)}
+button:disabled{opacity:.6;cursor:default}
+.ghost{background:#fff;color:var(--pri);border:1px solid var(--bd)}
+.ghost:hover{background:#eef3f7}
+.on{background:var(--ink);border-color:var(--ink);color:#fff}.on:hover{background:var(--ink)}
+details{margin-top:12px}summary{cursor:pointer;color:var(--pri);font-weight:600}
+.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;padding:20px 0 6px}
+.trust div{font-size:.93rem;color:var(--mut);border-left:3px solid var(--bd);padding-left:12px}
+.trust b{display:block;color:var(--ink)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 12px;align-items:center}.tabs>*{flex:0 0 auto}.tabs .sp{flex:1 1 auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:14px}
+.listing{display:flex;flex-direction:column}
+.listing .gal{order:-1;margin:-16px -16px 12px;border-radius:10px 10px 0 0}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.top strong{font-size:1.08rem}
+.price{font-weight:700;font-size:1.2rem;color:var(--ink);white-space:nowrap}
+.mut{color:var(--mut);font-size:.92rem}
+.tag{display:inline-block;font-size:.8rem;background:#eef2f6;color:#33414f;border-radius:5px;padding:1px 8px;margin:3px 6px 3px 0}
+.feat{background:var(--saf-bg);color:var(--saf);font-weight:600}
+.gal{display:flex;gap:2px;overflow-x:auto;background:#e6ebf0}.gal img{height:190px;flex:0 0 auto;object-fit:cover}
+.acts{margin-top:12px}.acts>*{flex:0 0 auto}
+.am{display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0}
+.am label{display:flex;gap:6px;align-items:center;margin:0;font-size:.92rem;color:var(--ink)}.am input{width:auto}
+label{font-size:.88rem;color:var(--mut);display:block;margin:10px 0 4px;font-weight:600}
+.hide{display:none}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 4px}
+.counts div{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 14px}
+.counts b{display:block;font-size:1.45rem;line-height:1.25}.counts span{color:var(--mut);font-size:.88rem}
+.unlock{background:#eef6ff;border:1px solid #bcd8ee;border-radius:8px;padding:10px 12px;margin-top:10px}
+h2{font-size:1.1rem;margin:0 0 6px}
+footer{margin-top:36px;border-top:1px solid var(--bd);background:var(--card);padding:22px 0;font-size:.9rem;color:var(--mut)}
+footer a{color:var(--pri);margin-right:16px}
+@media(max-width:560px){.gal img{height:160px}}
+</style>
+</head>
+<body>
+<header><div class="wrap bar">
+  <a class="brand" href="./"><svg viewBox="0 0 24 24" fill="none" stroke="#0e5a8a" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span data-brand>Room Finder</span></a>
+  <div style="display:flex;gap:8px"><a id="adminLink" class="btn ghost hide" href="admin.html">Admin पान</a><button id="authBtn" class="ghost">Google ने login</button></div>
+</div></header>
+<section class="hero"><div class="wrap">
+  <h1>कॉलेजजवळ रूम, थेट घरमालकाकडून</h1>
+  <p>दलाल नाही, कमिशन नाही. शहर आणि कॉलेज निवडा, फोटो पहा आणि घरमालकाशी थेट बोला.</p>
+  <div class="search">
+    <div class="row">
+      <input id="q" aria-label="शहर किंवा एरिया" placeholder="शहर किंवा एरिया (उदा. पुणे, कोथरूड)">
+      <input id="college" aria-label="कॉलेज" placeholder="कॉलेज (उदा. COEP)">
+      <input id="max" type="number" min="0" aria-label="कमाल भाडे" placeholder="कमाल भाडे (₹)">
+    </div>
+    <details><summary>आणखी फिल्टर</summary>
+      <div class="row" style="margin-top:10px">
+        <select id="type" aria-label="प्रकार"><option value="">सर्व प्रकार</option><option>Single room</option><option>Shared room</option><option>1 RK</option><option>PG</option></select>
+        <select id="gender" aria-label="कोणासाठी"><option value="">मुलगे आणि मुली</option><option>मुलांसाठी</option><option>मुलींसाठी</option><option>दोघांसाठी</option></select>
+        <select id="sort" aria-label="क्रम"><option value="new">नवीन आधी</option><option value="low">स्वस्त आधी</option><option value="high">महाग आधी</option><option value="near">जवळच्या आधी</option></select>
+      </div>
+      <div class="am" id="s_am" style="margin-top:10px"></div>
+    </details>
+  </div>
+</div></section>
+<main class="wrap">
+  <div class="trust">
+    <div><b>थेट घरमालकाशी संपर्क</b>मध्यस्थ किंवा कमिशन नाही.</div>
+    <div><b>संपर्क थोड्या शुल्कात</b>घरमालकाचा नंबर आणि पत्ता ठराविक वेळेसाठी उघडतो.</div>
+    <div><b>चुकीची माहिती कळवा</b>प्रत्येक रूमवर तक्रार करता येते.</div>
+  </div>
+  <div class="counts" id="counts" aria-live="polite"></div>
+  <div class="tabs">
+    <button id="v_all" class="on">सर्व रूम</button>
+    <button id="v_mine" class="ghost hide">माझ्या रूम</button>
+    <button id="favBtn" class="ghost hide">Saved</button>
+    <span class="sp"></span>
+    <button id="addBtn">रूम भाड्याने द्या</button>
+  </div>
+  <div id="form" class="card hide">
+    <h2>रूमची माहिती</h2>
+    <div class="row">
+      <div><label>शहर *</label><input id="f_city"></div>
+      <div><label>एरिया *</label><input id="f_area"></div>
+    </div>
+    <label>कॉलेज / संस्था जवळ</label><input id="f_college">
+    <div class="row">
+      <div><label>भाडे (₹/महिना) *</label><input id="f_rent" type="number" min="0"></div>
+      <div><label>डिपॉझिट (₹)</label><input id="f_dep" type="number" min="0"></div>
+    </div>
+    <div class="row">
+      <div><label>प्रकार</label><select id="f_type"><option>Single room</option><option>Shared room</option><option>1 RK</option><option>PG</option></select></div>
+      <div><label>कोणासाठी</label><select id="f_gender"><option>मुलांसाठी</option><option>मुलींसाठी</option><option>दोघांसाठी</option></select></div>
+    </div>
+    <label>सुविधा</label><div class="am" id="f_am"></div>
+    <label>वर्णन</label><textarea id="f_desc" rows="3" maxlength="1000"></textarea>
+    <label>फोटो (जास्तीत जास्त 3)</label><input id="f_photos" type="file" accept="image/*" multiple>
+    <div class="row">
+      <div><label>पूर्ण पत्ता * (फक्त पैसे भरलेल्यांना दिसेल)</label><input id="f_address" maxlength="300"></div>
+      <div><label>तुमचे नाव *</label><input id="f_name"></div>
+      <div><label>WhatsApp / फोन नंबर *</label><input id="f_phone" inputmode="numeric" placeholder="10 अंकी"></div>
+    </div>
+    <button type="button" id="locBtn" class="ghost" style="margin-top:8px">माझी सध्याची लोकेशन वापरा</button> <span id="locMsg" class="mut"></span>
+    <p class="mut">लोकेशन फक्त Featured झाल्यावर इतरांना दिसते. फोन नंबर आणि पत्ता फक्त पैसे भरलेल्यांना काही वेळासाठी दिसतो.</p>
+    <div class="am" style="margin-top:12px"><label><input type="checkbox" id="f_terms"><span>मी <a href="terms.html" target="_blank" rel="noopener">वापराच्या अटी</a> वाचल्या आहेत आणि मान्य करतो. मी दिलेली माहिती खरी आहे आणि ही रूम भाड्याने देण्याचा मला कायदेशीर अधिकार आहे.</span></label></div>
+    <button id="save" style="margin-top:6px">रूम प्रसिद्ध करा</button> <span id="msg" class="mut"></span>
+  </div>
+
+  <div id="list"></div>
+  <div style="text-align:center;margin:6px 0 10px"><button id="moreBtn" class="ghost hide">आणखी रूम दाखवा</button></div>
+  <p class="mut" id="status" role="status">लोड होत आहे…</p>
+</main>
+<footer><div class="wrap">
+  <a href="terms.html">वापराच्या अटी</a><a href="privacy.html">गोपनीयता धोरण</a><a href="refunds.html">परतावा धोरण</a><span id="contactLine"></span>
+  <p style="margin:10px 0 0">घरमालक आणि विद्यार्थी यांच्यातील व्यवहाराची जबाबदारी त्या दोघांची आहे. भाडेकरार आणि डिपॉझिट प्रत्यक्ष भेटून तपासा.</p>
+</div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

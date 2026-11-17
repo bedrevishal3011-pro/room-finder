@@ -1,0 +1,12 @@
+*{box-sizing:border-box}
+body{margin:0;background:#f4f6f8;color:#12202f;font:400 16px/1.75 "Mukta",system-ui,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+header{background:#fff;border-bottom:1px solid #d9e0e7;padding:14px 0}
+.brand{font-weight:700;font-size:1.15rem;color:#12202f;text-decoration:none}
+main{padding-bottom:20px}
+h1{font-size:1.6rem;margin:24px 0 4px}h2{font-size:1.1rem;margin:26px 0 4px}
+.mut{color:#566474;font-size:.9rem;margin:0 0 6px}
+li{margin:4px 0}a{color:#0e5a8a}
+.draft{background:#fff2d4;color:#8a5a00;border:1px solid #e8c777;border-radius:8px;padding:10px 14px;margin-top:18px}
+.todo{background:#fff2d4;color:#8a5a00;padding:0 4px;border-radius:3px}
+footer{border-top:1px solid #d9e0e7;background:#fff;padding:18px 0;font-size:.9rem}footer a{margin-right:16px}
