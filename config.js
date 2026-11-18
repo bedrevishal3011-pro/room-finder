@@ -10,5 +10,5 @@ window.CONFIG = {
   GRIEVANCE_OFFICER: "VISHAL BEDRE",          // तक्रार अधिकाऱ्याचे नाव
   JURISDICTION_CITY: "WASHIM",          // न्यायालयाचे शहर
   LEGAL_DATE: "18/11/2026",                 // अटी शेवटच्या कधी बदलल्या
-  LEGAL_DRAFT: False               // वकिलाकडून तपासल्यावर false करा
+  LEGAL_DRAFT: false               // वकिलाकडून तपासल्यावर false करा
 };
