@@ -635,12 +635,6 @@ document.querySelectorAll('[data-brand]').forEach(e => {
   e.textContent = CONFIG.BRAND || e.textContent;
 });
 
-if (CONFIG.CONTACT_EMAIL) {
-  const c = $('contactLine');
-  const m = el('a', '', CONFIG.CONTACT_EMAIL);
-  m.href = 'mailto:' + CONFIG.CONTACT_EMAIL;
-  c.append(m);
-}
 
 /* ---------- Razorpay Payment ---------- */
 function loadRzp() {
