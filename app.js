@@ -55,16 +55,49 @@ function showCounts() {
 
 const PAGE = 24;
 async function loadMeta() {
-  const cnt = () => sb.from('rooms').select('id', { count: 'exact', head: true }).eq('hidden', false);
-  const [tc, rc, st] = await Promise.all([cnt(), cnt().eq('rented', true), sb.from('settings').select('*').maybeSingle()]);
-  S.counts = { total: tc.count || 0, rented: rc.count || 0 }; showCounts();
+  const cnt = () =>
+    sb.from('rooms')
+      .select('id', { count: 'exact', head: true })
+      .eq('hidden', false);
+
+  const [tc, rc, st] = await Promise.all([
+    cnt(),
+    cnt().eq('rented', true),
+    sb.from('settings').select('*').maybeSingle()
+  ]);
+
+  S.counts = {
+    total: tc.count || 0,
+    rented: rc.count || 0
+  };
+
+  showCounts();
+
   if (st.data) S.settings = st.data;
-  S.contacts = {}; S.favs = new Set(); S.unlocks = {};
+
+  // Contacts आता loadRooms मधून page-wise load करू.
+  S.contacts = {};
+
+  S.favs = new Set();
+  S.unlocks = {};
+
   if (S.user) {
-    const [c, f, u] = await Promise.all([sb.from('room_contacts').select('*'), sb.from('favorites').select('room_id'), sb.from('unlocks').select('room_id, expires_at').gt('expires_at', new Date().toISOString())]);
-    S.contacts = Object.fromEntries((c.data || []).map(x => [x.room_id, x]));
-    S.favs = new Set((f.data || []).map(x => x.room_id));
-    S.unlocks = Object.fromEntries((u.data || []).map(x => [x.room_id, x.expires_at]));
+    const [f, u] = await Promise.all([
+      sb.from('favorites').select('room_id'),
+
+      sb.from('unlocks')
+        .select('room_id, expires_at')
+        .eq('user_id', S.user.id)
+        .gt('expires_at', new Date().toISOString())
+    ]);
+
+    S.favs = new Set(
+      (f.data || []).map(x => x.room_id)
+    );
+
+    S.unlocks = Object.fromEntries(
+      (u.data || []).map(x => [x.room_id, x.expires_at])
+    );
   }
 }
 const clean = s => s.replace(/[,()%*\\]/g, ' ').trim();
