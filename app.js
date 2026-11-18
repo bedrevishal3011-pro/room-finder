@@ -145,9 +145,24 @@ async function loadMeta() {
 
 const clean = s => s.replace(/[,()%*\\]/g, ' ').trim();
 
-async function loadRooms(reset = true) {
+async function loadContactsFor(rooms) {
+  if (!S.user || !rooms.length) return;
+
+  const { data, error } = await sb
+    .from('room_contacts')
+    .select('room_id, owner_name, phone, address')
+    .in('room_id', rooms.map(r => r.id));
+
+  if (error) { console.error('Contacts load error:', error); return; }
+  for (const contact of data || []) S.contacts[contact.room_id] = contact;
+}
+
+async function loadRooms(reset = true, quiet = false) {
   const id = ++S.req;
-  if (reset) S.page = 0;
+  if (reset) {
+    S.page = 0;
+    if (!quiet) showSkeleton();
+  }
 
   const q = clean($('q').value);
   const col = clean($('college').value);
@@ -214,32 +229,16 @@ async function loadRooms(reset = true) {
 
   S.more = !near && roomsData.length === PAGE;
 
-  if (S.user && roomsData.length) {
-    const roomIds = roomsData.map(r => r.id);
-
-    const { data: contactsData, error: contactsError } = await sb
-      .from('room_contacts')
-      .select('room_id, owner_name, phone, address')
-      .in('room_id', roomIds);
-
-    if (id !== S.req) return;
-
-    if (contactsError) {
-      console.error('Contacts load error:', contactsError);
-    } else {
-      for (const contact of contactsData || []) {
-        S.contacts[contact.room_id] = contact;
-      }
-    }
-  }
+  await loadContactsFor(roomsData);
 
   if (id !== S.req) return;
   render();
 }
 
-async function load() {
+async function load(quiet = false) {
+  if (!quiet) showSkeleton();
   await loadMeta();
-  await loadRooms(true);
+  await loadRooms(true, true);
 }
 
 let tmr;
@@ -314,12 +313,17 @@ function card(r, dist) {
   }
 
   if (r.photos.length) {
+    const urls = r.photos.map(photoUrl);
     const g = el('div', 'gal');
-    r.photos.forEach(p => {
+    urls.forEach((u, k) => {
       const i = el('img');
-      i.src = photoUrl(p);
+      i.src = u;
       i.loading = 'lazy';
-      i.alt = 'रूमचा फोटो';
+      i.alt = 'रूमचा फोटो ' + (k + 1) + ' (मोठा करायला दाबा)';
+      i.tabIndex = 0;
+      i.setAttribute('role', 'button');
+      i.addEventListener('click', () => openLightbox(urls, k));
+      i.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(urls, k); });
       g.append(i);
     });
     c.append(g);
@@ -483,6 +487,7 @@ async function post() {
 
   const btn = $('save');
   btn.disabled = true;
+  btn.classList.add('busy');
   $('msg').textContent = 'Post होत आहे…';
 
   const up = [];
@@ -561,6 +566,7 @@ async function post() {
   }
 
   btn.disabled = false;
+  btn.classList.remove('busy');
 }
 
 /* ---------- Events ---------- */
@@ -652,6 +658,7 @@ function loadRzp() {
 
 async function pay(r, btn) {
   btn.disabled = true;
+  btn.classList.add('busy');
 
   try {
     await loadRzp();
@@ -697,9 +704,10 @@ async function pay(r, btn) {
       }
 
       await refreshUserData();
-      await loadRooms(true);
 
-      if (S.unlocks[r.id] && S.contacts[r.id]) {
+      if (S.unlocks[r.id]) {
+        await loadContactsFor(S.rooms);
+        render();
         setStatus('संपर्क माहिती उघडली आहे.');
         return;
       }
@@ -712,6 +720,7 @@ async function pay(r, btn) {
 
   } finally {
     btn.disabled = false;
+    btn.classList.remove('busy');
   }
 }
 
@@ -739,6 +748,77 @@ setInterval(() => {
 
   if (expired && Date.now() - (S.last || 0) > 5000) {
     S.last = Date.now();
-    load();
+    load(true);
   }
 }, 1000);
+
+/* ---------- स्केलेटन लोडिंग आणि फोटो लाइटबॉक्स ---------- */
+function showSkeleton(n = 3) {
+  const l = $('list');
+  l.textContent = '';
+  $('moreBtn').classList.add('hide');
+  setStatus('रूम शोधत आहे…');
+
+  for (let k = 0; k < n; k++) {
+    const c = el('div', 'card skel');
+    c.setAttribute('aria-hidden', 'true');
+    [['100%', 160], ['55%', 18], ['35%', 14], ['80%', 14]].forEach(([w, h]) => {
+      const i = el('i');
+      i.style.width = w;
+      i.style.height = h + 'px';
+      c.append(i);
+    });
+    l.append(c);
+  }
+}
+
+function openLightbox(urls, start) {
+  let i = start, zoom = false, sx = 0;
+  const ov = el('div', 'lb'), stage = el('div', 'lb-stage'), img = el('img'), cap = el('div', 'lb-cap');
+  const x = el('button', 'lb-x', '✕'), prev = el('button', 'lb-nav lb-p', '‹'), next = el('button', 'lb-nav lb-n', '›');
+
+  ov.setAttribute('role', 'dialog');
+  ov.setAttribute('aria-label', 'फोटो पहा');
+  x.setAttribute('aria-label', 'बंद करा');
+  prev.setAttribute('aria-label', 'मागील फोटो');
+  next.setAttribute('aria-label', 'पुढील फोटो');
+
+  const show = n => {
+    i = (n + urls.length) % urls.length;
+    img.src = urls[i];
+    zoom = false;
+    stage.classList.remove('zoom');
+    cap.textContent = (i + 1) + ' / ' + urls.length + ' • मोठं करायला फोटोवर दाबा';
+  };
+  const key = e => {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') show(i - 1);
+    else if (e.key === 'ArrowRight') show(i + 1);
+  };
+  const close = () => {
+    document.removeEventListener('keydown', key);
+    ov.remove();
+    document.body.style.overflow = '';
+  };
+
+  img.addEventListener('click', () => { zoom = !zoom; stage.classList.toggle('zoom', zoom); });
+  ov.addEventListener('click', e => { if (e.target === ov || e.target === stage) close(); });
+  x.addEventListener('click', close);
+  prev.addEventListener('click', () => show(i - 1));
+  next.addEventListener('click', () => show(i + 1));
+  stage.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+  stage.addEventListener('touchend', e => {
+    const d = e.changedTouches[0].clientX - sx;
+    if (!zoom && Math.abs(d) > 60 && urls.length > 1) show(i + (d < 0 ? 1 : -1));
+  });
+
+  if (urls.length < 2) { prev.hidden = true; next.hidden = true; }
+
+  stage.append(img);
+  ov.append(stage, x, prev, next, cap);
+  document.body.append(ov);
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', key);
+  show(start);
+  x.focus();
+}
