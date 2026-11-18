@@ -29,6 +29,38 @@ function shrink(file) {
     img.src = u;
   });
 }
+function updateUserName() {
+  let nameEl = $('userName');
+
+  if (!nameEl) {
+    nameEl = el('span');
+    nameEl.id = 'userName';
+
+    nameEl.style.cssText = `
+      display: inline-block;
+      margin-right: 10px;
+      font-weight: 600;
+      color: #0e5a8a;
+      font-size: 14px;
+    `;
+
+    $('authBtn').insertAdjacentElement('beforebegin', nameEl);
+  }
+
+  if (S.user) {
+    const name =
+      S.user.user_metadata?.full_name ||
+      S.user.user_metadata?.name ||
+      S.user.email?.split('@')[0] ||
+      'User';
+
+    nameEl.textContent = 'नमस्कार, ' + name;
+    nameEl.style.display = 'inline-block';
+  } else {
+    nameEl.textContent = '';
+    nameEl.style.display = 'none';
+  }
+}
 
 /* ---------- Auth ---------- */
 $('authBtn').addEventListener('click', async () => {
@@ -41,6 +73,7 @@ async function afterAuth() {
   S.admin = false;
   if (S.user) { const { data } = await sb.from('admins').select('user_id').maybeSingle(); S.admin = !!data; }
   $('authBtn').textContent = S.user ? 'Logout' : 'Google ने login';
+  updateUserName();
   $('v_mine').classList.toggle('hide', !S.user); $('adminLink').classList.toggle('hide', !S.admin); $('favBtn').classList.toggle('hide', !S.user);
   if (!S.user) S.view = 'all';
   await load();
