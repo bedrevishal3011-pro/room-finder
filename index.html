@@ -1,0 +1,731 @@
+
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<script src="/seo.js"></script>
+<meta name="google-site-verification" content="G66kBNxSApDymzEXz1Kf6m939-Z1LeVH8LS9myaYWco" />
+<meta charset="utf-8">
+<title>Room Finder Maharashtra | विद्यार्थ्यांसाठी रूम शोधा</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="महाराष्ट्रात कॉलेजजवळ रूम शोधा. फोटो पहा, भाडे फिल्टर करा आणि घरमालकाशी थेट संपर्क साधा. दलाल नाही, कमिशन नाही.">
+<meta name="theme-color" content="#071b35">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700;800&family=Noto+Serif+Devanagari:wght@600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  color-scheme:light;
+  --ink:#10213a;
+  --mut:#64748b;
+  --paper:#f4f7fb;
+  --card:#fff;
+  --bd:#e1e8f0;
+  --pri:#1263a0;
+  --pri-d:#0b4778;
+  --pri-l:#eaf4ff;
+  --navy:#071b35;
+  --navy2:#0b2c50;
+  --lime:#c9f36b;
+  --ok:#16845b;
+  --shadow:0 12px 35px rgba(15,40,70,.08);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:400 16px/1.65 "Mukta",system-ui,sans-serif;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{margin:0;line-height:1.3}
+h1,h2{font-family:"Noto Serif Devanagari",serif}
+section[id]{scroll-margin-top:85px}
+.wrap{max-width:1160px;margin:0 auto;padding:0 22px}
+.skip{position:absolute;left:-999px;top:8px;background:#fff;padding:8px 12px;border-radius:8px;z-index:200}
+.skip:focus{left:8px}
+.hide{display:none!important}
+.mut{color:var(--mut);font-size:.92rem}
+
+/* HEADER */
+.site{
+  position:sticky;top:0;z-index:30;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(220,230,240,.9);
+}
+.bar{display:flex;align-items:center;gap:16px;min-height:76px}
+.brand{
+  display:flex;align-items:center;gap:10px;
+  font-weight:800;font-size:1.25rem;color:var(--navy);
+  text-decoration:none;white-space:nowrap;
+}
+.brand svg{width:34px;height:34px;flex:none}
+.nav{display:flex;gap:5px;margin-left:18px}
+.nav a{
+  color:#52647a;text-decoration:none;padding:8px 12px;
+  border-radius:9px;font-weight:700;font-size:.95rem;
+  transition:.2s;
+}
+.nav a:hover{background:var(--pri-l);color:var(--pri)}
+.acct{display:flex;align-items:center;gap:9px;margin-left:auto}
+
+/* BUTTONS */
+button,.btn{
+  background:var(--pri);color:#fff;border:1px solid var(--pri);
+  border-radius:10px;padding:11px 18px;
+  font:700 .96rem "Mukta",sans-serif;
+  cursor:pointer;text-decoration:none;display:inline-block;
+  text-align:center;transition:transform .2s,background .2s,box-shadow .2s;
+}
+button:hover,.btn:hover{
+  background:var(--pri-d);transform:translateY(-2px);
+  box-shadow:0 7px 18px rgba(18,99,160,.18);
+}
+button:disabled{opacity:.6;cursor:default;transform:none}
+.ghost{background:#fff;color:var(--pri);border:1px solid var(--bd)}
+.ghost:hover{background:var(--pri-l);border-color:#b8d8f3}
+.sm{padding:8px 13px;font-size:.9rem}
+.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.on:hover{background:var(--navy)}
+input,select,textarea{
+  width:100%;padding:12px 13px;border:1px solid var(--bd);
+  border-radius:10px;background:#fff;color:var(--ink);
+  font:inherit;outline:none;transition:border .2s,box-shadow .2s;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:#65a9dc;box-shadow:0 0 0 3px rgba(65,151,211,.12);
+}
+input[type=file]{padding:8px}
+input[type=file]::file-selector-button{
+  margin-right:10px;border:0;border-radius:7px;
+  background:var(--pri-l);color:var(--pri);
+  padding:7px 12px;font:700 .9rem "Mukta",sans-serif;cursor:pointer;
+}
+input[type=checkbox]{width:auto}
+input:focus-visible,select:focus-visible,textarea:focus-visible,
+button:focus-visible,a:focus-visible,summary:focus-visible,
+.gal img:focus-visible{outline:3px solid #7fb4d8;outline-offset:2px}
+label{font-size:.9rem;color:var(--mut);display:block;margin:10px 0 4px;font-weight:700}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>*{flex:1 1 160px}
+.am{display:flex;flex-wrap:wrap;gap:7px 18px;margin:5px 0}
+.am label{display:flex;gap:7px;align-items:center;margin:0;font-size:.94rem;color:var(--ink);font-weight:500}
+
+/* HERO */
+.hero{
+  position:relative;overflow:hidden;color:#fff;
+  background:
+    radial-gradient(circle at 85% 15%,rgba(201,243,107,.13),transparent 25%),
+    radial-gradient(circle at 10% 90%,rgba(54,151,220,.2),transparent 30%),
+    linear-gradient(125deg,#06172e 0%,#0b2c50 55%,#104b78 100%);
+  padding:65px 0 85px;
+}
+.hero:after{
+  content:"";position:absolute;width:430px;height:430px;
+  border:1px solid rgba(255,255,255,.08);border-radius:50%;
+  right:-150px;bottom:-260px;pointer-events:none;
+}
+.hero-grid{
+  display:grid;grid-template-columns:1.12fr .88fr;
+  gap:42px;align-items:center;position:relative;z-index:1;
+}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  margin:0 0 15px;padding:6px 13px;border-radius:50px;
+  background:rgba(201,243,107,.12);
+  border:1px solid rgba(201,243,107,.3);
+  color:var(--lime);font-weight:700;font-size:.92rem;
+}
+.hero h1{font-size:clamp(2rem,4.6vw,3.3rem);max-width:18em;letter-spacing:-.4px}
+.hero h1 span{color:var(--lime)}
+.lead{margin:15px 0 25px;color:#c8d9e9;max-width:39em;font-size:1.08rem}
+
+/* SEARCH BOX */
+.search{
+  background:#fff;border-radius:18px;padding:18px;color:var(--ink);
+  box-shadow:0 20px 55px rgba(0,0,0,.23);
+}
+#q,#college{
+  padding-left:40px;background-repeat:no-repeat;
+  background-position:12px center;background-size:19px;
+}
+#q{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z'/%3E%3Ccircle cx='12' cy='10' r='2.5'/%3E%3C/svg%3E")}
+#college{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M2 9l10-5 10 5-10 5z'/%3E%3Cpath d='M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5'/%3E%3C/svg%3E")}
+details{margin-top:12px}
+summary{cursor:pointer;color:var(--pri);font-weight:700}
+.chips{list-style:none;display:flex;flex-wrap:wrap;gap:9px;padding:0;margin:20px 0 0}
+.chips li{
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:50px;padding:5px 13px;font-size:.9rem;color:#e4eff8;
+}
+.art{width:100%;max-width:360px;justify-self:center;filter:drop-shadow(0 20px 30px rgba(0,0,0,.15))}
+
+/* HERO AUDIENCE CARDS */
+.audience{
+  display:grid;grid-template-columns:1fr 1fr;gap:13px;
+  margin-top:23px;
+}
+.audience-card{
+  min-width:0;display:flex;align-items:center;gap:13px;
+  padding:15px;border-radius:14px;text-decoration:none;
+  transition:transform .22s,background .22s,border .22s;
+}
+.audience-card:hover{transform:translateY(-4px)}
+.audience-card.student{
+  color:#fff;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.24);
+}
+.audience-card.owner{
+  color:var(--navy);background:var(--lime);
+  border:1px solid var(--lime);
+}
+.audience-icon{
+  width:43px;height:43px;display:grid;place-items:center;
+  flex:none;border-radius:12px;background:rgba(255,255,255,.15);
+  font-size:1.35rem;
+}
+.owner .audience-icon{background:rgba(7,27,53,.09)}
+.audience-card b{display:block;font-size:1rem;line-height:1.3}
+.audience-card small{display:block;font-size:.82rem;opacity:.8;margin-top:3px}
+.audience-arrow{margin-left:auto;font-size:1.3rem;flex:none}
+
+/* COUNTS */
+.counts{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:15px;
+  margin-top:-42px;position:relative;z-index:2;
+}
+.counts div{
+  background:#fff;border:1px solid var(--bd);border-radius:15px;
+  padding:17px 19px;box-shadow:var(--shadow);
+}
+.counts b{display:block;font-size:1.8rem;line-height:1.25;color:var(--pri)}
+.counts span{color:var(--mut);font-size:.92rem}
+
+/* ROOMS SECTION */
+.rooms{padding:42px 0 10px}
+.sec-head{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:13px;flex-wrap:wrap;margin-bottom:18px;
+}
+.sec-head h2{font-size:1.65rem}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{
+  background:var(--card);border:1px solid var(--bd);
+  border-radius:15px;padding:18px;margin-bottom:16px;
+  box-shadow:0 4px 16px rgba(15,40,70,.035);
+}
+.form{padding:23px}
+.form h2{font-size:1.3rem;margin-bottom:2px}
+.fs{border:0;padding:0;margin:0}
+.fs legend{font-weight:800;padding:0;margin:20px 0 0;color:var(--ink)}
+.listing{
+  display:flex;flex-direction:column;
+  transition:box-shadow .2s,transform .2s;
+  animation:up .4s both;
+}
+.listing:hover{box-shadow:0 13px 30px rgba(18,40,70,.12);transform:translateY(-3px)}
+.listing .gal{order:-1;margin:-18px -18px 14px;border-radius:15px 15px 0 0}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.top strong{font-size:1.12rem}
+.price{font-weight:800;font-size:1.25rem;color:var(--pri);white-space:nowrap}
+.tag{
+  display:inline-block;font-size:.82rem;background:#edf2f7;
+  color:#334155;border-radius:7px;padding:3px 9px;margin:3px 6px 3px 0;
+}
+.feat{background:#fff3d7;color:#8a5a00;font-weight:700}
+.gal{display:flex;gap:3px;overflow-x:auto;background:#e6ebf0}
+.gal img{
+  height:230px;min-width:250px;flex:0 0 auto;object-fit:cover;
+  background:#dfe6ec;cursor:zoom-in;transition:opacity .2s;
+}
+.gal img:hover{opacity:.88}
+.acts{margin-top:13px}.acts>*{flex:0 0 auto}
+.unlock{
+  background:#eef6ff;border:1px solid #c6def1;
+  border-radius:11px;padding:11px 13px;margin-top:11px;
+}
+#status{text-align:center;padding:20px 0}
+.more{text-align:center;margin:10px 0 15px}
+
+/* LOADING AND ANIMATION */
+.skel{pointer-events:none}
+.skel i{
+  display:block;border-radius:7px;margin:0 0 10px;
+  background:linear-gradient(90deg,#e8edf1 25%,#f4f7f9 37%,#e8edf1 63%);
+  background-size:400% 100%;animation:sh 1.3s ease infinite;
+}
+@keyframes sh{0%{background-position:100% 50%}100%{background-position:0 50%}}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+button.busy::after{
+  content:"";display:inline-block;width:14px;height:14px;margin-left:8px;
+  border:2px solid currentColor;border-right-color:transparent;
+  border-radius:50%;vertical-align:-2px;animation:spin .7s linear infinite;
+}
+
+/* LIGHTBOX */
+.lb{
+  position:fixed;inset:0;z-index:100;background:rgba(5,14,25,.96);
+  display:flex;flex-direction:column;animation:fade .15s;
+}
+.lb [hidden]{display:none}
+.lb-stage{
+  flex:1;overflow:auto;display:flex;align-items:center;
+  justify-content:center;-webkit-overflow-scrolling:touch;
+}
+.lb-stage img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
+.lb-stage.zoom{display:block}
+.lb-stage.zoom img{max-width:none;max-height:none;width:200%;cursor:zoom-out}
+.lb-x{
+  position:absolute;top:12px;right:12px;width:44px;height:44px;
+  border-radius:50%;background:rgba(255,255,255,.16);
+  border:0;font-size:1.2rem;padding:0;color:#fff;
+}
+.lb-nav{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:44px;height:56px;background:rgba(255,255,255,.16);
+  border:0;font-size:1.8rem;padding:0;border-radius:8px;color:#fff;
+}
+.lb-p{left:10px}.lb-n{right:10px}
+.lb-cap{color:#cdd8e2;text-align:center;padding:10px;font-size:.88rem}
+
+/* INFORMATION SECTIONS */
+.band{padding:58px 0}
+.band h2{font-size:1.7rem;margin-bottom:8px}
+.band .sub{color:var(--mut);margin:0 0 25px;max-width:42em;font-size:1.02rem}
+.how{
+  background:#fff;border-top:1px solid var(--bd);
+  border-bottom:1px solid var(--bd);margin-top:35px;
+}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
+.step{
+  border:1px solid var(--bd);border-radius:15px;
+  padding:22px;background:#f8fafc;
+  transition:transform .2s,box-shadow .2s;
+}
+.step:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.step .n{
+  display:inline-grid;place-items:center;width:39px;height:39px;
+  border-radius:12px;background:var(--navy);color:var(--lime);
+  font-weight:800;margin-bottom:12px;
+}
+.step h3{font-size:1.1rem;margin-bottom:5px}
+.step p{margin:0;color:var(--mut);font-size:.96rem}
+.owners{
+  background:
+    radial-gradient(circle at 90% 10%,rgba(201,243,107,.13),transparent 25%),
+    linear-gradient(120deg,#071b35,#104b78);
+  color:#fff;
+}
+.owners .sub{color:#d3e3f0}
+.owners .btn{
+  background:var(--lime);color:var(--navy);
+  border-color:var(--lime);font-weight:800;padding:12px 23px;
+}
+.owners .btn:hover{background:#d8ff8c}
+.faq details{
+  background:#fff;border:1px solid var(--bd);
+  border-radius:12px;padding:14px 17px;margin:0 0 11px;
+  transition:border .2s;
+}
+.faq details[open]{border-color:#a9cde8}
+.faq summary{color:var(--ink)}
+.faq details p{margin:9px 0 2px;color:var(--mut)}
+
+/* FOOTER */
+footer{
+  background:#06172e;color:#b9c8d8;
+  padding:38px 0;font-size:.94rem;
+}
+.fgrid{display:grid;grid-template-columns:1.4fr 1fr;gap:30px}
+footer b{color:#fff;display:block;margin-bottom:8px;font-size:1.05rem}
+footer a{color:#d4e8f8;margin-right:16px;display:inline-block}
+footer a:hover{color:var(--lime)}
+footer p{margin:0 0 9px}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr .65fr;gap:20px}
+  .art{max-width:280px}
+  .nav{display:none}
+}
+@media(max-width:700px){
+  .wrap{padding:0 16px}
+  .bar{min-height:66px}
+  .brand{font-size:1.08rem}
+  .brand svg{width:29px;height:29px}
+  #userName{display:none!important}
+  .hero{padding:42px 0 72px}
+  .hero-grid{grid-template-columns:1fr}
+  .art{display:none}
+  .hero h1{font-size:2.1rem}
+  .lead{font-size:1rem}
+  .audience{gap:9px}
+  .audience-card{padding:12px 10px;gap:8px}
+  .audience-icon{width:36px;height:36px;font-size:1.1rem}
+  .audience-card b{font-size:.91rem}
+  .audience-card small{font-size:.75rem}
+  .counts{gap:8px}
+  .counts div{padding:12px 10px;border-radius:12px}
+  .counts b{font-size:1.35rem}
+  .counts span{font-size:.78rem}
+  .rooms{padding-top:32px}
+  .sec-head h2{font-size:1.4rem}
+  .tabs{width:100%}
+  .tabs button{flex:1 1 auto}
+  .gal img{height:190px;min-width:220px}
+  .form{padding:16px}
+  .steps{grid-template-columns:1fr}
+  .band{padding:40px 0}
+  .band h2{font-size:1.45rem}
+  .fgrid{grid-template-columns:1fr;gap:20px}
+}
+@media(max-width:420px){
+  .audience{grid-template-columns:1fr}
+  .audience-card{padding:12px}
+  .hero h1{font-size:1.85rem}
+  .search{padding:13px}
+  .row>*{flex-basis:100%}
+  .counts span{font-size:.72rem}
+  .counts b{font-size:1.2rem}
+  .acct{gap:5px}
+  .acct button{padding:7px 10px;font-size:.82rem}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+
+<body>
+<a class="skip" href="#rooms">मुख्य मजकुराकडे जा</a>
+
+<header class="site">
+  <div class="wrap bar">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1263a0" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>
+      </svg>
+      <span data-brand>Room Finder</span>
+    </a>
+    <nav class="nav" aria-label="मुख्य">
+      <a href="#rooms">रूम शोधा</a>
+      <a href="#how">कसं चालतं</a>
+      <a href="#owners">घरमालकांसाठी</a>
+      <a href="#faq">प्रश्न</a>
+    </nav>
+    <div class="acct">
+      <a id="adminLink" class="btn ghost sm hide" href="admin.html">Admin पान</a>
+      <button id="authBtn" class="ghost sm">Google ने login</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">✦ महाराष्ट्रातील विद्यार्थ्यांसाठी Room Finder</p>
+      <h1>तुमच्या कॉलेजजवळची <span>योग्य रूम</span> शोधा!</h1>
+      <p class="lead">
+        दलाल नाही, कमिशन नाही. शहर आणि कॉलेज निवडा, रूमचे फोटो पहा
+        आणि घरमालकाशी थेट संपर्क साधा.
+      </p>
+
+      <div class="search">
+        <div class="row">
+          <input id="q" aria-label="शहर किंवा एरिया" placeholder="शहर किंवा एरिया (उदा. पुणे, कोथरूड)">
+          <input id="college" aria-label="कॉलेज" placeholder="कॉलेज (उदा. COEP)">
+          <input id="max" type="number" min="0" aria-label="कमाल भाडे" placeholder="कमाल भाडे (₹)">
+        </div>
+        <details>
+          <summary>आणखी फिल्टर दाखवा</summary>
+          <div class="row" style="margin-top:10px">
+            <select id="type" aria-label="प्रकार">
+              <option value="">सर्व प्रकार</option>
+              <option>Single room</option>
+              <option>Shared room</option>
+              <option>1 RK</option>
+              <option>1 BHK</option>
+              <option>PG</option>
+            </select>
+            <select id="gender" aria-label="कोणासाठी">
+              <option value="">मुलगे आणि मुली</option>
+              <option>मुलांसाठी</option>
+              <option>मुलींसाठी</option>
+              <option>दोघांसाठी</option>
+            </select>
+            <select id="sort" aria-label="क्रम">
+              <option value="new">नवीन आधी</option>
+              <option value="low">स्वस्त आधी</option>
+              <option value="high">महाग आधी</option>
+              <option value="near">जवळच्या आधी</option>
+            </select>
+          </div>
+          <div class="am" id="s_am" style="margin-top:10px"></div>
+        </details>
+      </div>
+
+      <div class="audience">
+        <a class="audience-card student" href="#rooms">
+          <span class="audience-icon">⌕</span>
+          <span>
+            <b>मला रूम शोधायची आहे</b>
+            <small>उपलब्ध रूम पाहा</small>
+          </span>
+          <span class="audience-arrow">→</span>
+        </a>
+        <a class="audience-card owner" href="#owners">
+          <span class="audience-icon">⌂</span>
+          <span>
+            <b>मला रूम भाड्याने द्यायची आहे</b>
+            <small>तुमची रूम लिस्ट करा</small>
+          </span>
+          <span class="audience-arrow">→</span>
+        </a>
+      </div>
+
+      <ul class="chips">
+        <li>✓ कमिशन नाही</li>
+        <li>✓ घरमालकाशी थेट संपर्क</li>
+        <li>✓ फोटो आणि माहिती</li>
+      </ul>
+    </div>
+
+    <svg class="art" viewBox="0 0 300 260" fill="none" aria-hidden="true">
+      <rect x="70" y="40" width="160" height="190" rx="8" fill="#ffffff" fill-opacity=".14" stroke="#ffffff" stroke-opacity=".55" stroke-width="2"/>
+      <g fill="#ffffff" fill-opacity=".7">
+        <rect x="92" y="62" width="30" height="26" rx="3"/>
+        <rect x="135" y="62" width="30" height="26" rx="3"/>
+        <rect x="178" y="62" width="30" height="26" rx="3"/>
+        <rect x="92" y="104" width="30" height="26" rx="3"/>
+        <rect x="135" y="104" width="30" height="26" rx="3" fill-opacity=".3"/>
+        <rect x="178" y="104" width="30" height="26" rx="3"/>
+        <rect x="92" y="146" width="30" height="26" rx="3"/>
+        <rect x="135" y="146" width="30" height="26" rx="3"/>
+        <rect x="178" y="146" width="30" height="26" rx="3" fill-opacity=".3"/>
+      </g>
+      <rect x="130" y="190" width="40" height="40" rx="4" fill="#ffffff" fill-opacity=".85"/>
+      <path d="M232 28c-13 0-22 9.5-22 21 0 15 22 34 22 34s22-19 22-34c0-11.5-9-21-22-21z" fill="#c9f36b"/>
+      <circle cx="232" cy="49" r="8" fill="#0b2c50"/>
+      <path d="M20 232h260" stroke="#ffffff" stroke-opacity=".5" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="counts" id="counts" aria-live="polite"></div>
+</div>
+
+<section id="rooms" class="rooms">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>उपलब्ध रूम शोधा</h2>
+      <div class="tabs">
+        <button id="v_all" class="on">सर्व रूम</button>
+        <button id="v_mine" class="ghost hide">माझ्या रूम</button>
+        <button id="favBtn" class="ghost hide">Saved</button>
+        <button id="addBtn">+ रूम भाड्याने द्या</button>
+      </div>
+    </div>
+
+    <div id="form" class="card form hide">
+      <h2>रूमची माहिती</h2>
+      <p class="mut" style="margin:2px 0 0">* असलेली माहिती आवश्यक आहे.</p>
+
+      <fieldset class="fs">
+        <legend>ठिकाण</legend>
+        <div class="row">
+          <div><label for="f_city">शहर *</label><input id="f_city"></div>
+          <div><label for="f_area">एरिया *</label><input id="f_area"></div>
+        </div>
+        <label for="f_college">कॉलेज / संस्था जवळ</label>
+        <input id="f_college">
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend>रूमचा तपशील</legend>
+        <div class="row">
+          <div><label for="f_rent">भाडे (₹/महिना) *</label><input id="f_rent" type="number" min="0"></div>
+          <div><label for="f_dep">डिपॉझिट (₹)</label><input id="f_dep" type="number" min="0"></div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="f_type">प्रकार</label>
+            <select id="f_type">
+              <option>Single room</option>
+              <option>Shared room</option>
+              <option>1 RK</option>
+              <option>1 BHK</option>
+              <option>PG</option>
+            </select>
+          </div>
+          <div>
+            <label for="f_gender">कोणासाठी</label>
+            <select id="f_gender">
+              <option>मुलांसाठी</option>
+              <option>मुलींसाठी</option>
+              <option>दोघांसाठी</option>
+            </select>
+          </div>
+        </div>
+        <label>सुविधा</label>
+        <div class="am" id="f_am"></div>
+        <label for="f_desc">वर्णन</label>
+        <textarea id="f_desc" rows="3" maxlength="1000"></textarea>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend>फोटो</legend>
+        <label for="f_photos">जास्तीत जास्त 3 फोटो (स्पष्ट आणि खरे फोटो टाका)</label>
+        <input id="f_photos" type="file" accept="image/*" multiple>
+      </fieldset>
+
+      <fieldset class="fs">
+        <legend>संपर्क (फक्त पैसे भरलेल्यांना दिसेल)</legend>
+        <label for="f_address">पूर्ण पत्ता *</label>
+        <input id="f_address" maxlength="300">
+        <div class="row">
+          <div><label for="f_name">तुमचे नाव *</label><input id="f_name"></div>
+          <div><label for="f_phone">WhatsApp / फोन नंबर *</label><input id="f_phone" inputmode="numeric" placeholder="10 अंकी"></div>
+        </div>
+        <button type="button" id="locBtn" class="ghost sm" style="margin-top:12px">माझी सध्याची लोकेशन वापरा</button>
+        <span id="locMsg" class="mut"></span>
+        <p class="mut" style="margin:8px 0 0">लोकेशन फक्त Featured झाल्यावर, पैसे भरलेल्यांना दिसते.</p>
+      </fieldset>
+
+      <div class="am" style="margin-top:16px">
+        <label>
+          <input type="checkbox" id="f_terms">
+          <span>मी <a href="terms.html" target="_blank" rel="noopener">वापराच्या अटी</a> वाचल्या आहेत आणि मान्य करतो. मी दिलेली माहिती खरी आहे आणि ही रूम भाड्याने देण्याचा मला कायदेशीर अधिकार आहे.</span>
+        </label>
+      </div>
+      <div style="margin-top:12px">
+        <button id="save">रूम प्रसिद्ध करा</button>
+        <span id="msg" class="mut"></span>
+      </div>
+    </div>
+
+    <div id="list"></div>
+    <div class="more">
+      <button id="moreBtn" class="ghost hide">आणखी रूम दाखवा</button>
+    </div>
+    <p class="mut" id="status" role="status">लोड होत आहे…</p>
+  </div>
+</section>
+
+<section id="how" class="band how">
+  <div class="wrap">
+    <h2>रूम कशी शोधायची?</h2>
+    <p class="sub">फक्त तीन सोप्या पायऱ्यांमध्ये कॉलेजजवळची रूम शोधा.</p>
+    <div class="steps">
+      <div class="step">
+        <span class="n">१</span>
+        <h3>रूम शोधा</h3>
+        <p>शहर, कॉलेज, भाडे आणि सुविधांनुसार रूम फिल्टर करा. जवळच्या रूम वर दिसण्यासाठी "जवळच्या आधी" निवडा.</p>
+      </div>
+      <div class="step">
+        <span class="n">२</span>
+        <h3>फोटो आणि माहिती पहा</h3>
+        <p>फोटो मोठे करून पहा आणि आवडलेल्या रूम Save करा. रूमवर काही चुकीचं वाटलं तर तक्रार करा.</p>
+      </div>
+      <div class="step">
+        <span class="n">३</span>
+        <h3>घरमालकाशी संपर्क करा</h3>
+        <p>लागू शुल्क भरल्यानंतर घरमालकाचा नंबर आणि पत्ता ठराविक वेळेसाठी उघडतो. प्रत्यक्ष भेट देऊनच व्यवहार करा.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="owners" class="band owners">
+  <div class="wrap">
+    <h2>तुमची रूम रिकामी आहे?</h2>
+    <p class="sub">
+      तुमची रूम विद्यार्थ्यांपर्यंत पोहोचवा. Google ने Login करा,
+      फोटो आणि माहिती भरा आणि तुमची रूम लिस्ट करा.
+      रूम टाकणं सध्या मोफत आहे.
+    </p>
+    <button id="addBtn2" class="btn">+ माझी रूम लिस्ट करा</button>
+  </div>
+</section>
+
+<section id="faq" class="band faq">
+  <div class="wrap">
+    <h2>नेहमीचे प्रश्न</h2>
+    <p class="sub">Room Finder वापरताना काही शंका असल्यास येथे उत्तरे मिळतील.</p>
+
+    <details>
+      <summary>संपर्क पाहण्यासाठी पैसे का भरावे लागतात?</summary>
+      <p>हे शुल्क फक्त घरमालकाचा नंबर आणि पत्ता ठराविक वेळेसाठी पाहण्यासाठी आहे. भाडे किंवा डिपॉझिट आमच्याकडे भरलं जात नाही, ते तुम्ही आणि घरमालक थेट ठरवता.</p>
+    </details>
+    <details>
+      <summary>माहिती किती वेळ दिसते?</summary>
+      <p>पैसे भरल्यावर रूमच्या कार्डवर वेळेची मोजणी दिसते. वेळ संपली की माहिती लपते आणि पुन्हा पाहायला पुन्हा पैसे भरावे लागतात. म्हणून नंबर आणि पत्ता लगेच लिहून घ्या.</p>
+    </details>
+    <details>
+      <summary>पैसे कापले पण माहिती उघडली नाही तर?</summary>
+      <p>काही सेकंद थांबा आणि पान refresh करा. तरीही न उघडल्यास <a href="refunds.html">परतावा धोरण</a> वाचून आम्हाला पेमेंट क्रमांकासह कळवा.</p>
+    </details>
+    <details>
+      <summary>फसवणूक कशी टाळायची?</summary>
+      <p>प्रत्यक्ष भेट देऊन जागा आणि कागदपत्रं तपासा, लेखी करार करा आणि भेटीशिवाय आगाऊ पैसे देऊ नका. चुकीची किंवा संशयास्पद रूम दिसली तर "तक्रार करा" बटण वापरा.</p>
+    </details>
+    <details>
+      <summary>रूम टाकणं मोफत आहे का?</summary>
+      <p>हो, सध्या रूम टाकण्यासाठी शुल्क नाही. तुमचा नंबर आणि पत्ता फक्त पैसे भरलेल्या विद्यार्थ्यांना काही वेळासाठी दिसतो.</p>
+    </details>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap fgrid">
+    <div>
+      <b data-brand>Room Finder</b>
+      <p>विद्यार्थ्यांना कॉलेजजवळ रूम शोधायला मदत करणारा मंच. आम्ही दलाल किंवा भाडेकरारातील पक्ष नाही.</p>
+      <p>घरमालक आणि विद्यार्थी यांच्यातील व्यवहाराची जबाबदारी त्या दोघांची आहे. भाडेकरार आणि डिपॉझिट प्रत्यक्ष भेटून तपासा.</p>
+    </div>
+    <div>
+      <b>महत्त्वाच्या लिंक्स</b>
+      <a href="terms.html">वापराच्या अटी</a>
+      <a href="privacy.html">गोपनीयता धोरण</a>
+      <a href="refunds.html">परतावा धोरण</a>
+      <p style="margin-top:8px"><span id="contactLine"></span></p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+<script>
+document.getElementById('addBtn2').addEventListener('click', function () {
+  var f = document.getElementById('form');
+  if (f.classList.contains('hide')) {
+    document.getElementById('addBtn').click();
+  }
+  setTimeout(function () {
+    if (!f.classList.contains('hide')) {
+      f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 60);
+});
+
+document.getElementById('addBtn').addEventListener('click', function () {
+  var f = document.getElementById('form');
+  setTimeout(function () {
+    if (!f.classList.contains('hide')) {
+      f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 60);
+});
+</script>
+</body>
+</html>
