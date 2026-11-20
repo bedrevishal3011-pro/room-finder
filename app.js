@@ -2,14 +2,18 @@ const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 const $ = id => document.getElementById(id);
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
 const AM = ['Wi-Fi', 'जेवण', 'AC', 'वॉशिंग मशीन', 'पार्किंग', 'वीज बिल समाविष्ट'];
-const S = { req: 0, page: 0, more: false, counts: { total: 0, rented: 0 }, unlocks: {}, settings: { view_fee_paise: 4900, unlock_minutes: 30 }, user: null, admin: false, rooms: [], contacts: {}, favs: new Set(), favOnly: false, view: 'all', me: null, loc: null };
+const S = { req: 0, page: 0, more: false, counts: { total: 0, rented: 0 }, unlocks: {}, settings: { view_fee_paise: 4900, unlock_minutes: 30 }, user: null, admin: false, rooms: [], contacts: {}, favorites: new Set(), favOnly: false, view: 'all', me: null };
 
 const setStatus = t => { $('status').textContent = t; };
 const normPhone = v => { const d = String(v || '').replace(/\D/g, ''); return d.length === 10 ? '91' + d : d; };
 const photoUrl = p => sb.storage.from('room-photos').getPublicUrl(p).data.publicUrl;
 const km = (a, b, c, d) => { const t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t, h = Math.sin(x / 2) ** 2 + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
 const locOf = r => { const l = Array.isArray(r.room_locations) ? r.room_locations[0] : r.room_locations; return l || null; };
-const getLoc = () => new Promise((ok, bad) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), bad, { enableHighAccuracy: true, timeout: 10000 }) : bad());
+// Admin status is authoritative when present; retain support for older rows without a status.
+const roomStatus = r => ['available', 'rented', 'inactive'].includes(r.status)
+  ? r.status
+  : (r.rented ? 'rented' : (r.hidden ? 'inactive' : 'available'));
+const getLoc = () => new Promise((ok, bad) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), bad, { enableHighAccuracy: true, timeout: 10000 }) : bad(new Error('लोकेशन उपलब्ध नाही')));
 
 function mkAm(id, fn) {
   AM.forEach(a => { const l = el('label'), i = el('input'); i.type = 'checkbox'; i.value = a; if (fn) i.addEventListener('input', fn); l.append(i, a); $(id).append(l); });
@@ -117,11 +121,12 @@ async function loadMeta() {
   const cnt = () =>
     sb.from('rooms')
       .select('id', { count: 'exact', head: true })
-      .eq('hidden', false);
+      .eq('hidden', false)
+      .or('status.is.null,status.neq.inactive');
 
   const [tc, rc, st] = await Promise.all([
     cnt(),
-    cnt().eq('rented', true),
+    cnt().or('status.eq.rented,and(status.is.null,rented.eq.true)'),
     sb.from('settings').select('*').maybeSingle()
   ]);
 
@@ -174,9 +179,12 @@ async function loadRooms(reset = true, quiet = false) {
   const near = sort === 'near' && !!S.me;
 
   let b = sb.from('rooms').select('*, room_locations(lat,lng)');
-  b = (S.view === 'mine' && S.user)
-    ? b.eq('owner_id', S.user.id)
-    : b.eq('hidden', false);
+  if (S.view === 'mine' && S.user) {
+    b = b.eq('owner_id', S.user.id);
+  } else {
+    // Inactive rooms should not appear publicly; keep legacy rows with no status visible.
+    b = b.eq('hidden', false).or('status.is.null,status.neq.inactive');
+  }
 
   if (q) b = b.or('city.ilike.*' + q + '*,area.ilike.*' + q + '*');
   if (col) b = b.ilike('college', '*' + col + '*');
@@ -217,6 +225,8 @@ async function loadRooms(reset = true, quiet = false) {
 
   const roomsData = (data || []).map(r => ({
     ...r,
+    rent: Number(r.rent) || 0,
+    deposit: Number(r.deposit) || 0,
     amenities: Array.isArray(r.amenities) ? r.amenities : [],
     photos: Array.isArray(r.photos) ? r.photos : []
   }));
@@ -286,13 +296,14 @@ function render() {
 
 function card(r, dist) {
   const c = el('div', 'card listing');
+  const status = roomStatus(r);
   const top = el('div', 'top');
   const l = el('div');
 
   l.append(el('strong', '', r.area + ', ' + r.city));
 
   const tg = el('div');
-  [r.room_type, r.gender].forEach(x => tg.append(el('span', 'tag', x)));
+  [r.room_type, r.gender].filter(Boolean).forEach(x => tg.append(el('span', 'tag', x)));
 
   if (r.featured) tg.append(el('span', 'tag feat', 'Featured'));
   if (r.hidden) tg.append(el('span', 'tag feat', 'लपवलेली'));
@@ -301,6 +312,9 @@ function card(r, dist) {
   l.append(tg);
   top.append(l, el('div', 'price', '₹' + r.rent.toLocaleString('en-IN') + '/महिना'));
   c.append(top);
+
+  const statusText = { available: 'उपलब्ध', rented: 'भाड्याने गेलेली', inactive: 'निष्क्रिय' };
+  c.append(el('span', `room-status-badge room-status-${status}`, statusText[status]));
 
   if (r.deposit) c.append(el('div', 'mut', 'डिपॉझिट: ₹' + r.deposit.toLocaleString('en-IN')));
   if (r.college) c.append(el('div', 'mut', r.college + ' जवळ'));
@@ -351,9 +365,10 @@ function card(r, dist) {
   const exp = S.unlocks[r.id];
   const l2 = locOf(r);
 
-  if (r.rented) {
+  if (status === 'rented') {
     c.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
-    c.style.opacity = '.65';
+  } else if (status === 'inactive') {
+    c.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
   } else if (ct) {
     const box = el('div', 'unlock');
     box.append(
