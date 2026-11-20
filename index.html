@@ -868,56 +868,50 @@ footer p{margin:0 0 8px}
   const ownerButton = document.getElementById("addBtn2");
   const closeButton = document.getElementById("closeFormBtn");
 
-  if (!form || !mainButton || !ownerButton || !closeButton) {
-    console.error("Room listing form controls were not found.");
-    return;
-  }
+  if (!form || !closeButton) return;
 
-  function openRoomForm(event) {
-    if (event) {
-      event.preventDefault();
-    }
+  function setFormState(open) {
+    form.classList.toggle("hide", !open);
+    form.setAttribute("aria-hidden", open ? "false" : "true");
 
-    form.classList.remove("hide");
-    form.setAttribute("aria-hidden", "false");
-
-    // Form दिसल्यानंतर त्याच्याकडे scroll करा.
-    requestAnimationFrame(function () {
-      form.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
+    if (open) {
+      requestAnimationFrame(() => {
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        const firstInput = document.getElementById("f_city");
+        if (firstInput) {
+          setTimeout(() => {
+            if (!form.classList.contains("hide")) {
+              firstInput.focus({ preventScroll: true });
+            }
+          }, 300);
+        }
       });
-
-      const firstInput = document.getElementById("f_city");
-      if (firstInput) {
-        setTimeout(function () {
-          firstInput.focus({ preventScroll: true });
-        }, 350);
-      }
-    });
-  }
-
-  function closeRoomForm(event) {
-    if (event) {
-      event.preventDefault();
     }
-
-    form.classList.add("hide");
-    form.setAttribute("aria-hidden", "true");
-
-    mainButton.focus({ preventScroll: true });
   }
 
-  // दोन्ही CTA एकच फॉर्म उघडतील.
-  mainButton.addEventListener("click", openRoomForm);
-  ownerButton.addEventListener("click", openRoomForm);
+  // '#closeFormBtn' दाबल्यावर फॉर्म नक्की बंद होईल
+  closeButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setFormState(false);
+    if (mainButton) mainButton.focus({ preventScroll: true });
+  });
 
-  // Close button फॉर्म बंद करेल.
-  closeButton.addEventListener("click", closeRoomForm);
+  // '#form' चा 'hide' क्लास बदलल्यावर aria-hidden व scroll/focus सुसंगत ठेवण्यासाठी
+  const observer = new MutationObserver(() => {
+    const isHidden = form.classList.contains("hide");
+    form.setAttribute("aria-hidden", isHidden ? "true" : "false");
+    if (!isHidden) {
+      requestAnimationFrame(() => {
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  });
 
-  // सुरुवातीला फॉर्म बंद ठेवा.
-  form.classList.add("hide");
-  form.setAttribute("aria-hidden", "true");
+  observer.observe(form, { attributes: true, attributeFilter: ["class"] });
+
+  // सुरुवातीला फॉर्म बंद ठेवा
+  setFormState(false);
 })();
 </script>
 
