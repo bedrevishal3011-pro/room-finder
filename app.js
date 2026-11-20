@@ -144,19 +144,19 @@ async function loadMeta() {
 }
 
 async function loadContactsFor(rooms) {
-  if (!rooms || !rooms.length) return;
+  if (!S.user || !rooms.length) return;
 
-  if (isPaymentOff()) {
-    const { data, error } = await sb
-      .from('room_contacts')
-      .select('room_id, owner_name, phone, address')
-      .in('room_id', rooms.map(r => r.id));
+  const { data, error } = await sb
+    .from('room_contacts')
+    .select('room_id, owner_name, phone, address')
+    .in('room_id', rooms.map(r => r.id));
 
-    if (!error && data) {
-      data.forEach(c => {
-        S.contacts[c.room_id] = c;
-      });
-    }
+  if (error) {
+    console.error('Contacts load error:', error);
+    return;
+  }
+  for (const contact of data || []) S.contacts[contact.room_id] = contact;
+}
     return;
   }
 
@@ -1176,4 +1176,55 @@ function openLightbox(urls, start) {
   document.addEventListener('keydown', key);
   show(start);
   x.focus();
+}
+const ct = S.contacts[r.id];
+const exp = S.unlocks[r.id];
+const l2 = locOf(r);
+const paymentOff = isPaymentOff();
+
+if (status === 'rented') {
+  c.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
+} else if (status === 'inactive') {
+  c.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
+} else if (S.user && ct && (paymentOff || exp)) {
+  const box = el('div', 'unlock');
+  box.append(
+    el('strong', '', ct.owner_name + ' • ' + ct.phone),
+    el('div', '', ct.address)
+  );
+
+  if (!paymentOff && exp) {
+    const t = el('div', 'mut');
+    t.dataset.exp = exp;
+    box.append(t);
+  }
+
+  c.append(box);
+
+  link('WhatsApp', 'btn',
+    'https://wa.me/' + ct.phone + '?text=' +
+    encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?'));
+
+  link('Call', 'btn ghost', 'tel:+' + ct.phone);
+
+  if (r.featured && l2) {
+    link('Maps वर पहा', 'btn ghost',
+      'https://www.google.com/maps?q=' + l2.lat + ',' + l2.lng);
+  }
+} else {
+  if (!paymentOff) {
+    acts.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
+  }
+
+  const pb = add(
+    S.user
+      ? 'संपर्क आणि पत्ता पहा – ₹' + (S.settings.view_fee_paise / 100) +
+        ' (' + S.settings.unlock_minutes + ' मिनिटे)'
+      : 'संपर्क आणि पत्ता पाहण्यासाठी login करा',
+    '',
+    () => {
+      if (S.user) pay(r, pb);
+      else $('authBtn').click();
+    }
+  );
 }
