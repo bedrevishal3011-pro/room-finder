@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="room-status.css">
 <style>
 :root{color-scheme:light;--ink:#12202f;--mut:#566474;--paper:#f4f6f8;--card:#fff;--bd:#d9e0e7;--pri:#0e5a8a;--pri-d:#0a4568;--saf:#8a5a00;--saf-bg:#fff2d4;--bad:#a52a2a}
 *{box-sizing:border-box}
@@ -45,19 +46,14 @@ button:hover{background:var(--pri-d)}button:disabled{opacity:.6}
 </head>
 <body>
 <section id="s_loading" class="center"><p>लोड होत आहे…</p></section>
-
 <section id="s_login" class="center hide">
-  <h1>Admin login</h1>
-  <p>हे पान फक्त अधिकृत व्यवस्थापकांसाठी आहे. तुमच्या Google खात्याने login करा.</p>
+  <h1>Admin login</h1><p>हे पान फक्त अधिकृत व्यवस्थापकांसाठी आहे. तुमच्या Google खात्याने login करा.</p>
   <button id="loginBtn">Google ने login करा</button>
 </section>
-
 <section id="s_denied" class="center hide">
-  <h1>प्रवेश नाही</h1>
-  <p><span id="deniedWho"></span> या खात्याला admin अधिकार नाहीत. योग्य खात्याने login करा.</p>
+  <h1>प्रवेश नाही</h1><p><span id="deniedWho"></span> या खात्याला admin अधिकार नाहीत. योग्य खात्याने login करा.</p>
   <button class="ghost" id="logoutBtn2">Logout</button> <a class="btn ghost" href="./">वेबसाइटवर जा</a>
 </section>
-
 <div id="s_app" class="hide">
   <header><div class="wrap bar">
     <div class="brand"><span data-brand>Room Finder</span><small>Admin</small></div>
@@ -68,6 +64,8 @@ button:hover{background:var(--pri-d)}button:disabled{opacity:.6}
     <div class="tabs" role="tablist">
       <button id="t_req" class="on">Featured विनंत्या</button>
       <button id="t_rooms">सर्व रूम</button>
+      <button id="t_status">Room Status</button>
+      <button id="t_payment">Payment Settings</button>
       <button id="t_rep">तक्रारी</button>
       <button id="t_fee">शुल्क</button>
     </div>
@@ -75,13 +73,17 @@ button:hover{background:var(--pri-d)}button:disabled{opacity:.6}
       <input id="aq" placeholder="शहर, एरिया, मालकाचे नाव किंवा नंबर शोधा" aria-label="शोध">
       <select id="af" aria-label="स्थिती"><option value="all">सर्व</option><option value="featured">Featured</option><option value="hidden">लपवलेल्या</option><option value="rented">भाड्याने गेलेल्या</option></select>
     </div>
+    <div id="status-tools" class="tools hide">
+      <input id="statusSearch" placeholder="शहर किंवा एरिया शोधा" aria-label="Room शोध">
+      <select id="statusFilter" aria-label="Room status"><option value="all">All Rooms</option><option value="available">Available Rooms</option><option value="rented">Rented Rooms</option><option value="inactive">Inactive Rooms</option></select>
+    </div>
     <div id="list"></div>
   </main>
 </div>
 <div id="note" class="hide" role="alert"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="admin.js"></script>
+<script src="admin-status-payment.js"></script>
 </body>
 </html>
