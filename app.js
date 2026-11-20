@@ -1,1230 +1,1040 @@
+/* Room Finder Maharashtra - clean app.js
+   Uses the existing index.html element IDs and Supabase tables.
+   Keep Supabase secrets in config.js / Edge Functions, never in this file.
+*/
+'use strict';
+
 const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 const $ = id => document.getElementById(id);
-const el = (t, c, x) => {
-  const e = document.createElement(t);
-  if (c) e.className = c;
-  if (x != null) e.textContent = x;
-  return e;
-};
-const AM = ['Wi-Fi', 'जेवण', 'AC', 'वॉशिंग मशीन', 'पार्किंग', 'वीज बिल समाविष्ट'];
-const S = {
-  req: 0,
-  page: 0,
-  more: false,
-  counts: { total: 0, rented: 0 },
-  unlocks: {},
-  settings: { view_fee_paise: 4900, unlock_minutes: 30 },
-  user: null,
-  admin: false,
-  rooms: [],
-  contacts: {},
-  favorites: new Set(),
-  favOnly: false,
-  view: 'all',
-  me: null
+const el = (tag, cls = '', text = '') => {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== null && text !== undefined) node.textContent = String(text);
+  return node;
 };
 
-const setStatus = t => { $('status').textContent = t; };
-const normPhone = v => {
-  const d = String(v || '').replace(/\D/g, '');
-  return d.length === 10 ? '91' + d : d;
-};
-const photoUrl = p => sb.storage.from('room-photos').getPublicUrl(p).data.publicUrl;
-const km = (a, b, c, d) => {
-  const t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t;
-  const h = Math.sin(x / 2) ** 2 + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) ** 2;
-  return 12742 * Math.asin(Math.sqrt(h));
-};
-const locOf = r => {
-  const l = Array.isArray(r.room_locations) ? r.room_locations[0] : r.room_locations;
-  return l || null;
-};const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-const $ = id => document.getElementById(id);
-const el = (t, c, x, attrs = {}) => {
-  const e = document.createElement(t);
-  if (c) e.className = c;
-  if (x != null) e.textContent = x;
-  Object.assign(e, attrs);
-  return e;
-};
 const AM = ['Wi-Fi', 'जेवण', 'AC', 'वॉशिंग मशीन', 'पार्किंग', 'वीज बिल समाविष्ट'];
+const PAGE_SIZE = 24;
+
 const S = {
   req: 0,
   page: 0,
   more: false,
   counts: { total: 0, rented: 0 },
-  unlocks: {},
-  settings: { view_fee_paise: 4900, unlock_minutes: 30 },
+  settings: { view_fee_paise: 4900, unlock_minutes: 30, payment_enabled: true },
   user: null,
   admin: false,
   rooms: [],
   contacts: {},
+  unlocks: {},
   favorites: new Set(),
   favOnly: false,
   view: 'all',
   me: null,
-  loc: null
+  loc: null,
+  last: 0
 };
 
+const setStatus = message => { if ($('status')) $('status').textContent = message; };
+const normPhone = value => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length === 10 ? '91' + digits : digits;
+};
+const clean = value => String(value || '').replace(/[,()%*\\]/g, ' ').trim();
+const photoUrl = path => sb.storage.from('room-photos').getPublicUrl(path).data.publicUrl;
+
 function isPaymentOff() {
-  const s = S.settings || {};
-  if (s.payment_enabled === false) return true;
-  if (s.payment_off === true) return true;
-  if (s.view_fee_paise != null && Number(s.view_fee_paise) <= 0) return true;
-  return false;
+  const settings = S.settings || {};
+  return settings.payment_enabled === false ||
+    settings.payment_off === true ||
+    Number(settings.view_fee_paise) <= 0;
 }
 
-function roomStatus(r) {
-  if (!r) return 'available';
-  if (r.hidden || r.status === 'inactive') return 'inactive';
-  if (r.status === 'rented' || r.rented === true) return 'rented';
+function roomStatus(room) {
+  if (!room) return 'available';
+  if (room.hidden || room.status === 'inactive') return 'inactive';
+  if (room.status === 'rented' || room.rented === true) return 'rented';
   return 'available';
+}
+
+function locOf(room) {
+  const row = Array.isArray(room.room_locations)
+    ? room.room_locations[0]
+    : room.room_locations;
+  if (row && row.lat != null && row.lng != null) {
+    return { lat: Number(row.lat), lng: Number(row.lng) };
+  }
+  if (room.lat != null && room.lng != null) {
+    return { lat: Number(room.lat), lng: Number(room.lng) };
+  }
+  if (room.location && room.location.coordinates) {
+    return {
+      lat: Number(room.location.coordinates[1]),
+      lng: Number(room.location.coordinates[0])
+    };
+  }
+  return null;
+}
+
+function distanceKm(a, b) {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
 }
 
 function loadFavs() {
   try {
-    const raw = localStorage.getItem('room_favs');
-    if (raw) {
-      const arr = JSON.parse(raw);
-      S.favorites = new Set(arr);
-    }
-  } catch (e) {}
+    const values = JSON.parse(localStorage.getItem('room_favs') || '[]');
+    S.favorites = new Set(Array.isArray(values) ? values : []);
+  } catch (_) {
+    S.favorites = new Set();
+  }
 }
 
 function saveFavs() {
-  try {
-    localStorage.setItem('room_favs', JSON.stringify([...S.favorites]));
-  } catch (e) {}
-}
-
-function toggleFav(id) {
-  if (S.favorites.has(id)) {
-    S.favorites.delete(id);
-  } else {
-    S.favorites.add(id);
-  }
-  saveFavs();
-  render();
+  try { localStorage.setItem('room_favs', JSON.stringify([...S.favorites])); }
+  catch (_) {}
 }
 
 function showCounts() {
-  const c = $('counts');
-  if (!c) return;
-  c.textContent = '';
-  const total = S.counts.total || 0;
-  const rented = S.counts.rented || 0;
-  const vacant = Math.max(0, total - rented);
+  const container = $('counts');
+  if (!container) return;
+  container.textContent = '';
+  const total = Number(S.counts.total) || 0;
+  const rented = Number(S.counts.rented) || 0;
   [
     ['एकूण रूम', total],
     ['भाड्याने गेलेल्या', rented],
-    ['रिकाम्या रूम', vacant]
-  ].forEach(([l, v]) => {
-    const d = el('div');
-    d.append(el('b', '', v), el('span', '', l));
-    c.append(d);
+    ['रिकाम्या रूम', Math.max(0, total - rented)]
+  ].forEach(([label, value]) => {
+    const item = el('div');
+    item.append(el('b', '', value), el('span', '', label));
+    container.append(item);
   });
 }
 
 async function loadMeta() {
-  const cnt = () => sb
-    .from('rooms')
-    .select('*', { count: 'exact', head: true })
-    .eq('hidden', false);
+  const baseCount = () => sb.from('rooms')
+    .select('id', { count: 'exact', head: true })
+    .eq('hidden', false)
+    .or('status.is.null,status.neq.inactive');
 
-  const [tc, rc, st] = await Promise.all([
-    cnt().or('status.is.null,status.neq.inactive'),
-    cnt().or('status.eq.rented,and(status.is.null,rented.eq.true)'),
+  const [totalResult, rentedResult, settingsResult] = await Promise.all([
+    baseCount(),
+    baseCount().or('status.eq.rented,and(status.is.null,rented.eq.true)'),
     sb.from('settings').select('*').maybeSingle()
   ]);
 
-  if (!tc.error) S.counts.total = tc.count || 0;
-  if (!rc.error) S.counts.rented = rc.count || 0;
-  if (!st.error && st.data) S.settings = { ...S.settings, ...st.data };
+  if (totalResult.error) console.error('Room count error:', totalResult.error);
+  if (rentedResult.error) console.error('Rented count error:', rentedResult.error);
+  if (settingsResult.error) console.error('Settings error:', settingsResult.error);
+
+  S.counts = {
+    total: totalResult.count || 0,
+    rented: rentedResult.count || 0
+  };
+  if (settingsResult.data) S.settings = { ...S.settings, ...settingsResult.data };
   showCounts();
+}
+
+async function refreshUserData() {
+  S.unlocks = {};
+  if (!S.user) {
+    S.favorites = new Set();
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const [favResult, unlockResult] = await Promise.all([
+    sb.from('favorites').select('room_id').eq('user_id', S.user.id),
+    sb.from('unlocks').select('room_id, expires_at')
+      .eq('user_id', S.user.id)
+      .gt('expires_at', now)
+  ]);
+
+  if (favResult.error) console.error('Favorites error:', favResult.error);
+  if (unlockResult.error) console.error('Unlocks error:', unlockResult.error);
+
+  S.favorites = new Set((favResult.data || []).map(row => row.room_id));
+  S.unlocks = Object.fromEntries(
+    (unlockResult.data || []).map(row => [row.room_id, row.expires_at])
+  );
 }
 
 async function loadContactsFor(rooms) {
   if (!S.user || !rooms.length) return;
 
-  const { data, error } = await sb
-    .from('room_contacts')
+  // Fetch contact rows only for rooms the current user owns or has unlocked.
+  const allowed = rooms.filter(room =>
+    room.owner_id === S.user.id ||
+    isPaymentOff() ||
+    Boolean(S.unlocks[room.id])
+  );
+  if (!allowed.length) return;
+
+  const { data, error } = await sb.from('room_contacts')
     .select('room_id, owner_name, phone, address')
-    .in('room_id', rooms.map(r => r.id));
+    .in('room_id', allowed.map(room => room.id));
 
   if (error) {
     console.error('Contacts load error:', error);
     return;
   }
-  for (const contact of data || []) S.contacts[contact.room_id] = contact;
+  (data || []).forEach(contact => { S.contacts[contact.room_id] = contact; });
 }
+
+function updateUserName() {
+  let nameNode = $('userName');
+  if (!nameNode && $('authBtn')) {
+    nameNode = el('span');
+    nameNode.id = 'userName';
+    nameNode.style.cssText =
+      'display:inline-block;margin-right:10px;font-weight:600;color:#0e5a8a;font-size:14px;';
+    $('authBtn').insertAdjacentElement('beforebegin', nameNode);
+  }
+  if (!nameNode) return;
+
+  if (S.user) {
+    const name = S.user.user_metadata?.full_name ||
+      S.user.user_metadata?.name ||
+      S.user.email?.split('@')[0] || 'User';
+    nameNode.textContent = 'नमस्कार, ' + name;
+    nameNode.style.display = 'inline-block';
+  } else {
+    nameNode.textContent = '';
+    nameNode.style.display = 'none';
+  }
+}
+
+async function updateAuthUI() {
+  const authButton = $('authBtn');
+  if (authButton) authButton.textContent = S.user ? 'Logout' : 'Google ने login';
+  updateUserName();
+
+  $('v_mine')?.classList.toggle('hide', !S.user);
+  $('favBtn')?.classList.toggle('hide', !S.user);
+  $('adminLink')?.classList.toggle('hide', !S.admin);
+
+  if (!S.user) {
+    S.admin = false;
+    S.view = 'all';
+    S.favOnly = false;
+    S.contacts = {};
+  }
+}
+
+async function afterAuth() {
+  S.admin = false;
+  if (S.user) {
+    // Admin visibility is a UI convenience only; protect admin.html with database/RLS checks too.
+    const { data, error } = await sb.from('admins')
+      .select('user_id')
+      .eq('user_id', S.user.id)
+      .maybeSingle();
+    if (error) console.warn('Admin check:', error.message);
+    S.admin = Boolean(data);
+  }
+  await updateAuthUI();
+  await load();
+}
+
+function showSkeleton(count = 3) {
+  const list = $('list');
+  if (!list) return;
+  list.textContent = '';
+  $('moreBtn')?.classList.add('hide');
+  setStatus('रूम शोधत आहे…');
+
+  for (let index = 0; index < count; index++) {
+    const card = el('div', 'card skel');
+    card.setAttribute('aria-hidden', 'true');
+    [['100%', 160], ['55%', 18], ['35%', 14], ['80%', 14]].forEach(([width, height]) => {
+      const line = el('i');
+      line.style.width = width;
+      line.style.height = height + 'px';
+      card.append(line);
+    });
+    list.append(card);
+  }
+}
+
+function getAmenityValues(id) {
+  return [...($(id)?.querySelectorAll('input:checked') || [])].map(input => input.value);
+}
+
+function buildAmenityChecks(id, onChange) {
+  const host = $(id);
+  if (!host) return;
+  host.textContent = '';
+  AM.forEach(value => {
+    const label = el('label');
+    const input = el('input');
+    input.type = 'checkbox';
+    input.value = value;
+    if (onChange) input.addEventListener('change', onChange);
+    label.append(input, document.createTextNode(value));
+    host.append(label);
+  });
+}
+
+let reloadTimer;
+function reloadSoon() {
+  clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(() => loadRooms(true), 350);
+}
+
+async function loadRooms(reset = true, quiet = false) {
+  const requestId = ++S.req;
+  if (reset) {
+    S.page = 0;
+    if (!quiet) showSkeleton();
+  }
+
+  const cityArea = clean($('q')?.value);
+  const college = clean($('college')?.value);
+  const type = $('type')?.value || '';
+  const gender = $('gender')?.value || '';
+  const maxRent = Number($('max')?.value) || 0;
+  const amenities = getAmenityValues('s_am');
+  const sort = $('sort')?.value || 'new';
+  const near = sort === 'near' && Boolean(S.me);
+
+  let query = sb.from('rooms').select('*, room_locations(lat,lng)');
+
+  if (S.view === 'mine' && S.user) {
+    query = query.eq('owner_id', S.user.id);
+  } else {
+    query = query.eq('hidden', false)
+      .eq('rented', false)
+      .or('status.is.null,and(status.neq.inactive,status.neq.rented)');
+  }
+
+  if (cityArea) {
+    query = query.or('city.ilike.*' + cityArea + '*,area.ilike.*' + cityArea + '*');
+  }
+  if (college) query = query.ilike('college', '*' + college + '*');
+  if (type) query = query.eq('room_type', type);
+  if (gender) query = query.eq('gender', gender);
+  if (maxRent > 0) query = query.lte('rent', maxRent);
+  if (amenities.length) query = query.contains('amenities', amenities);
+
+  if (S.favOnly) {
+    query = query.in('id', S.favorites.size
+      ? [...S.favorites]
+      : ['00000000-0000-0000-0000-000000000000']);
+  }
+
+  query = query.order('featured', { ascending: false });
+  if (sort === 'low') query = query.order('rent', { ascending: true });
+  else if (sort === 'high') query = query.order('rent', { ascending: false });
+  else query = query.order('created_at', { ascending: false });
+  query = query.order('id');
+
+  const pageSize = near ? 200 : PAGE_SIZE;
+  const start = near ? 0 : S.page * PAGE_SIZE;
+  const { data, error } = await query.range(start, start + pageSize - 1);
+
+  if (requestId !== S.req) return;
+  if (error) {
+    console.error('Rooms load error:', error);
+    setStatus('डेटा लोड होत नाही: ' + error.message);
     return;
   }
 
-  if (!S.user) return;
-  const { data, error } = await sb
-    .from('room_unlocks')
-    .select('room_id, expires_at')
-    .eq('user_id', S.user.id)
-    .gt('expires_at', new Date().toISOString());
+  const rows = (data || []).map(room => ({
+    ...room,
+    rent: Number(room.rent) || 0,
+    deposit: Number(room.deposit) || 0,
+    amenities: Array.isArray(room.amenities) ? room.amenities : [],
+    photos: Array.isArray(room.photos) ? room.photos : []
+  }));
 
-  if (error || !data || !data.length) return;
+  if (reset) S.contacts = {};
+  S.rooms = reset ? rows : S.rooms.concat(rows);
+  S.more = !near && rows.length === PAGE_SIZE;
 
-  const unlockedIds = data.map(u => {
-    S.unlocks[u.room_id] = u.expires_at;
-    return u.room_id;
-  });
-
-  if (!unlockedIds.length) return;
-
-  const { data: contactsData } = await sb
-    .from('room_contacts')
-    .select('room_id, owner_name, phone, address')
-    .in('room_id', unlockedIds);
-
-  if (contactsData) {
-    contactsData.forEach(c => {
-      S.contacts[c.room_id] = c;
-    });
-  }
-}
-
-async function toggleRent(r) {
-  const curStatus = roomStatus(r);
-  const willBeRented = curStatus !== 'rented';
-  const newRented = willBeRented;
-  const newStatus = willBeRented ? 'rented' : 'available';
-
-  const { error } = await sb
-    .from('rooms')
-    .update({ rented: newRented, status: newStatus })
-    .eq('id', r.id);
-
-  if (!error) {
-    r.rented = newRented;
-    r.status = newStatus;
-    await loadMeta();
-    render();
-  } else {
-    alert('एरर आला: ' + (error.message || 'स्टेटस अपडेट होऊ शकले नाही'));
-  }
-}
-
-async function loadRooms(reset = false) {
-  if (reset) {
-    S.page = 0;
-    S.rooms = [];
-  }
-  const PAGE_SIZE = 12;
-  let b = sb.from('rooms').select('*');
-
-  if (S.view === 'mine' && S.user) {
-    b = b.eq('owner_id', S.user.id);
-  } else {
-    b = b.eq('hidden', false).eq('rented', false).or('status.is.null,status.eq.available');
-  }
-
-  const queryText = $('q')?.value?.trim();
-  if (queryText) {
-    b = b.or(`title.ilike.%${queryText}%,address.ilike.%${queryText}%,description.ilike.%${queryText}%`);
-  }
-
-  b = b.order('created_at', { ascending: false }).range(S.page * PAGE_SIZE, (S.page + 1) * PAGE_SIZE - 1);
-
-  const { data, error } = await b;
-  if (!error && data) {
-    S.more = data.length === PAGE_SIZE;
-    if (reset) S.rooms = data;
-    else S.rooms = S.rooms.concat(data);
-    await loadContactsFor(data);
-  }
+  await loadContactsFor(rows);
+  if (requestId !== S.req) return;
   render();
+} 
+async function load(quiet = false) {
+  if (!quiet) showSkeleton();
+  await loadMeta();
+  await refreshUserData();
+  await loadRooms(true, true);
 }
 
-function locOf(r) {
-  if (r.lat && r.lng) return { lat: r.lat, lng: r.lng };
-  if (r.location && r.location.coordinates) {
-    return { lat: r.location.coordinates[1], lng: r.location.coordinates[0] };
-  }
-  return null;
+function makeLink(label, className, href) {
+  const anchor = el('a', className, label);
+  anchor.href = href;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  return anchor;
 }
 
 function render() {
   const list = $('list');
   if (!list) return;
-  list.textContent = '';
 
-  let out = S.rooms || [];
+  ['all', 'mine'].forEach(view => {
+    const button = $('v_' + view);
+    if (!button) return;
+    button.classList.toggle('on', S.view === view);
+    button.classList.toggle('ghost', S.view !== view);
+  });
+
+  let rooms = S.rooms.slice();
   if (S.view === 'mine') {
-    if (S.user) {
-      out = out.filter(r => r.owner_id === S.user.id);
-    } else {
-      out = [];
-    }
+    rooms = rooms.filter(room => S.user && room.owner_id === S.user.id);
   } else {
-    out = out.filter(r => roomStatus(r) === 'available' && !r.hidden);
+    rooms = rooms.filter(room => roomStatus(room) === 'available' && !room.hidden);
   }
+  if (S.favOnly) rooms = rooms.filter(room => S.favorites.has(room.id));
 
-  if (S.favOnly) {
-    out = out.filter(r => S.favorites.has(r.id));
-  }
-
-  if (!out.length) {
-    list.append(el('div', 'empty', S.favOnly ? 'कोणतीही आवडती रूम नाही.' : 'एकही रूम सापडली नाही.'));
-    return;
-  }
-
-  out.forEach(r => list.append(card(r)));
-
-  const moreBtn = $('moreBtn');
-  if (moreBtn) {
-    moreBtn.style.display = S.more ? 'block' : 'none';
-  }
-}
-
-function card(r) {
-  const c = el('div', 'card');
-  const status = roomStatus(r);
-  const isOwner = S.user && r.owner_id === S.user.id;
-
-  const top = el('div', 'card-top');
-  const t = el('h3', '', r.title || 'रूम');
-  top.append(t);
-
-  const favBtn = el('button', 'fav-btn' + (S.favorites.has(r.id) ? ' active' : ''), S.favorites.has(r.id) ? '❤️' : '🤍');
-  favBtn.onclick = (e) => {
-    e.stopPropagation();
-    toggleFav(r.id);
+  const distance = room => {
+    const location = locOf(room);
+    return room.featured && location && S.me
+      ? distanceKm(S.me, location)
+      : Number.POSITIVE_INFINITY;
   };
-  top.append(favBtn);
-  c.append(top);
-
-  if (r.rent || r.deposit) {
-    const meta = el('div', 'meta');
-    if (r.rent) meta.append(el('span', 'price', '₹' + r.rent + '/महिना'));
-    if (r.deposit) meta.append(el('span', 'deposit', 'डिपॉझिट: ₹' + r.deposit));
-    c.append(meta);
+  if ($('sort')?.value === 'near' && S.me) {
+    rooms.sort((a, b) => distance(a) - distance(b));
   }
 
-  if (r.description) {
-    c.append(el('p', 'desc', r.description));
-  }
-
-  if (r.amenities && Array.isArray(r.amenities) && r.amenities.length) {
-    const am = el('div', 'amenities');
-    r.amenities.forEach(a => am.append(el('span', 'tag', a)));
-    c.append(am);
-  }
-
-  const ct = S.contacts[r.id];
-  const exp = S.unlocks[r.id];
-  const l2 = locOf(r);
-  const paymentDisabled = isPaymentOff();
-
-  if (status === 'rented') {
-    c.append(el('span', 'tag feat', 'भाड्याने गेलेली आहे'));
-  } else if (status === 'inactive') {
-    c.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
-  } else if (paymentDisabled || ct) {
-    const box = el('div', 'unlock');
-    const ownerName = ct?.owner_name || r.owner_name || 'रूम मालक';
-    const phone = ct?.phone || r.phone || r.contact_phone || '';
-    const addr = ct?.address || r.address || r.full_address || 'पत्ता उपलब्ध आहे';
-
-    box.append(
-      el('strong', '', ownerName + (phone ? ' • ' + phone : '')),
-      el('div', '', addr)
-    );
-
-    if (exp && !paymentDisabled) {
-      const expDiv = el('div', 'mut');
-      expDiv.dataset.exp = exp;
-      box.append(expDiv);
-    }
-    c.append(box);
-
-    const acts = el('div', 'acts');
-    if (phone) {
-      const waMsg = encodeURIComponent('नमस्कार, Room Finder वर तुमची रूम पाहिली: ' + (r.title || ''));
-      acts.append(
-        el('a', 'btn', 'WhatsApp', { href: 'https://wa.me/' + phone.replace(/[^0-9]/g, '') + '?text=' + waMsg, target: '_blank' }),
-        el('a', 'btn ghost', 'Call', { href: 'tel:' + phone })
-      );
-    }
-    if (l2) {
-      acts.append(el('a', 'btn ghost', 'Maps वर पहा', { href: 'https://www.google.com/maps?q=' + l2.lat + ',' + l2.lng, target: '_blank' }));
-    }
-    c.append(acts);
-  } else {
-    const acts = el('div', 'acts');
-    acts.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
-    const feeRs = (S.settings.view_fee_paise || 4900) / 100;
-    const pb = el('button', 'btn', S.user
-      ? 'संपर्क आणि पत्ता पहा - ₹' + feeRs + ' (' + (S.settings.unlock_minutes || 30) + ' मिनिटे)'
-      : 'संपर्कासाठी login करा'
-    );
-    pb.onclick = () => {
-      if (S.user) pay(r, pb);
-      else $('authBtn')?.click();
-    };
-    acts.append(pb);
-    c.append(acts);
-  }
-
-  if (isOwner) {
-    const ownerActs = el('div', 'owner-acts');
-    const rentToggleBtn = el('button', 'btn ghost', status === 'rented' ? 'उपलब्ध आहे म्हणून मार्क करा' : 'भाड्याने गेली म्हणून मार्क करा');
-    rentToggleBtn.onclick = () => toggleRent(r);
-    ownerActs.append(rentToggleBtn);
-    c.append(ownerActs);
-  }
-
-  return c;
-}
-
-async function init() {
-  loadFavs();
-  await loadMeta();
-
-  sb.auth.onAuthStateChange((evt, sess) => {
-    S.user = sess?.user || null;
-    updateAuthUI();
-    loadRooms(true);
-  });
-
-  const { data: { session } } = await sb.auth.getSession();
-  S.user = session?.user || null;
-  updateAuthUI();
-  await loadRooms(true);
-
-  setupEventListeners();
-}
-
-function updateAuthUI() {
-  const authBtn = $('authBtn');
-  if (authBtn) {
-    authBtn.textContent = S.user ? 'Logout (' + (S.user.email || 'User') + ')' : 'Login / Sign up';
-  }
-  const mineTab = $('tabMine');
-  if (mineTab) {
-    mineTab.style.display = S.user ? 'inline-block' : 'none';
-  }
-}
-
-function setupEventListeners() {
-  $('tabAll')?.addEventListener('click', () => {
-    S.view = 'all';
-    $('tabAll').classList.add('active');
-    $('tabMine')?.classList.remove('active');
-    loadRooms(true);
-  });
-
-  $('tabMine')?.addEventListener('click', () => {
-    S.view = 'mine';
-    $('tabMine').classList.add('active');
-    $('tabAll')?.classList.remove('active');
-    loadRooms(true);
-  });
-
-  $('favFilter')?.addEventListener('click', () => {
-    S.favOnly = !S.favOnly;
-    $('favFilter').classList.toggle('active', S.favOnly);
-    render();
-  });
-
-  $('searchBtn')?.addEventListener('click', () => loadRooms(true));
-  $('moreBtn')?.addEventListener('click', () => {
-    S.page++;
-    loadRooms(false);
-  });
-
-  $('authBtn')?.addEventListener('click', async () => {
-    if (S.user) {
-      await sb.auth.signOut();
-      S.user = null;
-      updateAuthUI();
-      loadRooms(true);
-    } else {
-      const email = prompt('ईमेल टाका:');
-      if (email) {
-        const { error } = await sb.auth.signInWithOtp({ email });
-        if (error) alert('एरर: ' + error.message);
-        else alert('लॉगिन लिंक ईमेलवर पाठवली आहे.');
-      }
-    }
-  });
-}
-
-function loadRzp() {
-  return new Promise((ok, bad) => {
-    if (window.Razorpay) return ok();
-    const s = document.createElement('script');
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    s.onload = ok;
-    s.onerror = () => bad(new Error('पेमेंट विंडो लोड झाली नाही'));
-    document.head.append(s);
-  });
-}
-
-async function pay(r, btn) {
-  if (btn) {
-    btn.disabled = true;
-    btn.classList.add('busy');
-  }
-  try {
-    await loadRzp();
-    const { data, error } = await sb.functions.invoke('create-order', { body: { room_id: r.id } });
-    if (error || !data || data.error) throw new Error((data && data.error) || 'पेमेंट सुरू करता आले नाही');
-
-    const rz = new Razorpay({
-      key: data.key_id,
-      order_id: data.order_id,
-      amount: data.amount,
-      currency: 'INR',
-      name: CONFIG.BRAND || 'Room Finder',
-      description: 'घरमालकाचा संपर्क आणि पत्ता (' + S.settings.unlock_minutes + ' मिनिटे)',
-      prefill: { email: S.user.email },
-      theme: { color: '#0e5a8a' },
-      handler: async () => {
-        await loadContactsFor([r]);
-        render();
-      },
-      modal: { ondismiss: () => alert('पेमेंट रद्द झाले') }
-    });
-    rz.on('payment.failed', () => alert('पेमेंट अयशस्वी झाले'));
-    rz.open();
-  } catch (err) {
-    alert(err.message || 'पेमेंट करताना त्रुटी आली');
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.classList.remove('busy');
-    }
-  }
-}
-
-document.addEventListener('DOMContentLoaded', init);
-const roomStatus = r =>
-  ['available', 'rented', 'inactive'].includes(r.status)
-    ? r.status
-    : (r.rented ? 'rented' : (r.hidden ? 'inactive' : 'available'));
-
-const getLoc = () => new Promise((ok, bad) =>
-  navigator.geolocation
-    ? navigator.geolocation.getCurrentPosition(
-        p => ok({ lat: p.coords.latitude, lng: p.coords.longitude }),
-        bad,
-        { enableHighAccuracy: true, timeout: 10000 }
-      )
-    : bad(new Error('लोकेशन उपलब्ध नाही'))
-);
-
-function mkAm(id, fn) {
-  AM.forEach(a => {
-    const l = el('label'), i = el('input');
-    i.type = 'checkbox';
-    i.value = a;
-    if (fn) i.addEventListener('input', fn);
-    l.append(i, a);
-    $(id).append(l);
-  });
-}
-const amVals = id => [...$(id).querySelectorAll('input:checked')].map(i => i.value);
-
-function shrink(file) {
-  return new Promise((res, rej) => {
-    const img = new Image(), u = URL.createObjectURL(file);
-    img.onload = () => {
-      const s = Math.min(1, 1000 / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * s);
-      c.height = Math.round(img.height * s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(u);
-      c.toBlob(b => b ? res(b) : rej(new Error('फोटो प्रक्रिया अयशस्वी')), 'image/jpeg', 0.8);
-    };
-    img.onerror = () => rej(new Error('हा फोटो वाचता आला नाही'));
-    img.src = u;
-  });
-}
-
-function updateUserName() {
-  let nameEl = $('userName');
-  if (!nameEl) {
-    nameEl = el('span');
-    nameEl.id = 'userName';
-    nameEl.style.cssText = 'display:inline-block;margin-right:10px;font-weight:600;color:#0e5a8a;font-size:14px;';
-    $('authBtn').insertAdjacentElement('beforebegin', nameEl);
-  }
-  if (S.user) {
-    const name = S.user.user_metadata?.full_name || S.user.user_metadata?.name || S.user.email?.split('@')[0] || 'User';
-    nameEl.textContent = 'नमस्कार, ' + name;
-    nameEl.style.display = 'inline-block';
-  } else {
-    nameEl.textContent = '';
-    nameEl.style.display = 'none';
-  }
-}
-
-/* ---------- Auth ---------- */
-$('authBtn').addEventListener('click', async () => {
-  if (S.user) {
-    await sb.auth.signOut();
-    return;
-  }
-  await sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: location.origin + location.pathname }
-  });
-});
-
-sb.auth.onAuthStateChange((_e, session) => {
-  S.user = session ? session.user : null;
-  setTimeout(afterAuth, 0);
-});
-
-async function afterAuth() {
-  S.admin = false;
-  if (S.user) {
-    const { data } = await sb.from('admins').select('user_id').maybeSingle();
-    S.admin = !!data;
-  }
-  $('authBtn').textContent = S.user ? 'Logout' : 'Google ने login';
-  updateUserName();
-  $('v_mine').classList.toggle('hide', !S.user);
-  $('adminLink').classList.toggle('hide', !S.admin);
-  $('favBtn').classList.toggle('hide', !S.user);
-  if (!S.user) S.view = 'all';
-  await load();
-}
-
-/* ---------- Data ---------- */
-function showCounts() {
-  const c = $('counts');
-  c.textContent = '';
-  const vacant = Math.max(0, (S.counts.total || 0) - (S.counts.rented || 0));
-  [
-    ['एकूण रूम', S.counts.total || 0],
-    ['भाड्याने गेलेल्या', S.counts.rented || 0],
-    ['रिकाम्या रूम', vacant]
-  ].forEach(([l, v]) => {
-    const d = el('div');
-    d.append(el('b', '', v), el('span', '', l));
-    c.append(d);
-  });
-}
-
-const PAGE = 24;
-
-async function refreshUserData() {
-  S.favorites = new Set();
-  S.unlocks = {};
-  if (!S.user) return;
-  const now = new Date().toISOString();
-  const [f, u] = await Promise.all([
-    sb.from('favorites').select('room_id'),
-    sb.from('unlocks').select('room_id, expires_at').eq('user_id', S.user.id).gt('expires_at', now)
-  ]);
-  if (f.error) console.error('Favorites load error:', f.error);
-  if (u.error) console.error('Unlocks load error:', u.error);
-  S.favorites = new Set((f.data || []).map(x => x.room_id));
-  S.unlocks = Object.fromEntries((u.data || []).map(x => [x.room_id, x.expires_at]));
-}
-
-async function loadMeta() {
-  const cnt = () => sb
-    .from('rooms')
-    .select('id', { count: 'exact', head: true })
-    .eq('hidden', false)
-    .or('status.is.null,status.neq.inactive');
-
-  const [tc, rc, st] = await Promise.all([
-    cnt(),
-    cnt().or('status.eq.rented,and(status.is.null,rented.eq.true)'),
-    sb.from('settings').select('*').maybeSingle()
-  ]);
-
-  if (tc.error) console.error('Room count error:', tc.error);
-  if (rc.error) console.error('Rented count error:', rc.error);
-  if (st.error) console.error('Settings load error:', st.error);
-
-  S.counts = { total: tc.count || 0, rented: rc.count || 0 };
-  showCounts();
-  if (st.data) S.settings = { ...S.settings, ...st.data };
-  S.contacts = {};
-  await refreshUserData();
-}
-
-const clean = s => s.replace(/[,()%*\\]/g, ' ').trim();
-
-async function loadContactsFor(rooms) {
-  if (!S.user || !rooms.length) return;
-  const { data, error } = await sb
-    .from('room_contacts')
-    .select('room_id, owner_name, phone, address')
-    .in('room_id', rooms.map(r => r.id));
-  if (error) {
-    console.error('Contacts load error:', error);
-    return;
-  }
-  for (const contact of data || []) S.contacts[contact.room_id] = contact;
-}
-
-async function loadRooms(reset = true, quiet = false) {
-  const id = ++S.req;
-  if (reset) {
-    S.page = 0;
-    if (!quiet) showSkeleton();
-  }
-  const q = clean($('q').value);
-  const col = clean($('college').value);
-  const ty = $('type').value;
-  const g = $('gender').value;
-  const mx = Number($('max').value) || 0;
-  const sam = amVals('s_am');
-  const sort = $('sort').value;
-  const near = sort === 'near' && !!S.me;
-
-  let b = sb.from('rooms').select('*, room_locations(lat,lng)');
-
-  if (S.view === 'mine' && S.user) {
-    // 'माझ्या रूम' मध्ये मालकाला स्वतःच्या सर्व रूम (भाड्याने गेलेल्यांसह) दिसतील
-    b = b.eq('owner_id', S.user.id);
-  } else {
-    // होम/सार्वजनिक लिस्टमध्ये फक्त रिकाम्या/उपलब्ध रूम दिसतील; भाड्याने गेलेल्या आणि inactive लपवल्या जातील
-    b = b
-      .eq('hidden', false)
-      .eq('rented', false)
-      .or('status.is.null,and(status.neq.inactive,status.neq.rented)');
-  }
-
-  if (q) b = b.or('city.ilike.*' + q + '*,area.ilike.*' + q + '*');
-  if (col) b = b.ilike('college', '*' + col + '*');
-  if (ty) b = b.eq('room_type', ty);
-  if (g) b = b.eq('gender', g);
-  if (mx) b = b.lte('rent', mx);
-  if (sam.length) b = b.contains('amenities', sam);
-  if (S.favOnly) {
-    b = b.in('id', S.favorites.size ? [...S.favorites] : ['00000000-0000-0000-0000-000000000000']);
-  }
-
-  b = b.order('featured', { ascending: false });
-  b = sort === 'low'
-    ? b.order('rent')
-    : sort === 'high'
-      ? b.order('rent', { ascending: false })
-      : b.order('created_at', { ascending: false });
-  b = b.order('id');
-
-  const size = near ? 200 : PAGE;
-  const from = near ? 0 : S.page * PAGE;
-  const { data, error } = await b.range(from, from + size - 1);
-  if (id !== S.req) return;
-  if (error) {
-    setStatus('डेटा लोड होत नाही: ' + error.message);
-    console.error('Rooms load error:', error);
-    return;
-  }
-
-  const roomsData = (data || []).map(r => ({
-    ...r,
-    rent: Number(r.rent) || 0,
-    deposit: Number(r.deposit) || 0,
-    amenities: Array.isArray(r.amenities) ? r.amenities : [],
-    photos: Array.isArray(r.photos) ? r.photos : []
-  }));
-
-  if (reset || near) S.contacts = {};
-  S.rooms = (reset || near) ? roomsData : S.rooms.concat(roomsData);
-  S.more = !near && roomsData.length === PAGE;
-  await loadContactsFor(roomsData);
-  if (id !== S.req) return;
-  render();
-}
-
-async function load(quiet = false) {
-  if (!quiet) showSkeleton();
-  await loadMeta();
-  await loadRooms(true, true);
-}
-
-let tmr;
-const reloadSoon = () => {
-  clearTimeout(tmr);
-  tmr = setTimeout(() => loadRooms(true), 350);
-};
-
-/* ---------- Render ---------- */
-function render() {
-  ['all', 'mine'].forEach(v => {
-    const b = $('v_' + v);
-    b.classList.toggle('on', S.view === v);
-    b.classList.toggle('ghost', S.view !== v);
-  });
-
-  const dd = r => {
-    const l = locOf(r);
-    return (r.featured && l && S.me) ? km(S.me.lat, S.me.lng, l.lat, l.lng) : 1e9;
-  };
-
-  const out = S.rooms.slice();
-  if ($('sort').value === 'near' && S.me) {
-    out.sort((a, b) => dd(a) - dd(b));
-  }
-
-  const list = $('list');
   list.textContent = '';
-  out.forEach(r => list.append(card(r, dd(r))));
-  $('moreBtn').classList.toggle('hide', !S.more);
+  rooms.forEach(room => list.append(card(room, distance(room))));
+  $('moreBtn')?.classList.toggle('hide', !S.more);
 
   setStatus(
-    out.length
-      ? out.length + ' रूम दाखवल्या' + (S.more ? ' – आणखी आहेत' : '')
-      : (S.view === 'mine'
-          ? 'तुम्ही अजून रूम टाकलेली नाही.'
-          : (S.counts.total === 0 ? 'अजून एकही रूम नाही – पहिली रूम तुम्ही add करा!' : 'या शोधासाठी रिकाम्या रूम नाहीत.'))
+    rooms.length
+      ? rooms.length + ' रूम दाखवल्या' + (S.more ? ' – आणखी आहेत' : '')
+      : S.view === 'mine'
+        ? 'तुम्ही अजून रूम टाकलेली नाही.'
+        : S.favOnly
+          ? 'कोणतीही आवडती उपलब्ध रूम नाही.'
+          : S.counts.total === 0
+            ? 'अजून एकही रूम नाही – पहिली रूम तुम्ही add करा!'
+            : 'या शोधासाठी रिकाम्या रूम नाहीत.'
   );
 }
 
-function card(r, dist) {
-  const c = el('div', 'card listing');
-  const status = roomStatus(r);
+function card(room, distance) {
+  const container = el('div', 'card listing');
+  const status = roomStatus(room);
   const top = el('div', 'top');
-  const l = el('div');
-  l.append(el('strong', '', r.area + ', ' + r.city));
+  const details = el('div');
 
-  const tg = el('div');
-  [r.room_type, r.gender].filter(Boolean).forEach(x => tg.append(el('span', 'tag', x)));
-  if (r.featured) tg.append(el('span', 'tag feat', 'Featured'));
-  if (r.hidden) tg.append(el('span', 'tag feat', 'लपवलेली'));
-  if (r.featured_requested && !r.featured) tg.append(el('span', 'tag', 'Featured विनंती'));
-  l.append(tg);
-
-  top.append(l, el('div', 'price', '₹' + r.rent.toLocaleString('en-IN') + '/महिना'));
-  c.append(top);
-
-  const statusText = { available: 'उपलब्ध (रिकामी)', rented: 'भाड्याने गेलेली', inactive: 'निष्क्रिय' };
-  c.append(el('span', `room-status-badge room-status-${status}`, statusText[status]));
-
-  if (r.deposit) c.append(el('div', 'mut', 'डिपॉझिट: ₹' + r.deposit.toLocaleString('en-IN')));
-  if (r.college) c.append(el('div', 'mut', r.college + ' जवळ'));
-  if (r.featured && dist < 1e9) c.append(el('div', 'mut', 'तुमच्यापासून सुमारे ' + dist.toFixed(1) + ' किमी'));
-  if (r.amenities.length) {
-    const d = el('div');
-    r.amenities.forEach(a => d.append(el('span', 'tag', a)));
-    c.append(d);
+  details.append(el('strong', '', [room.area, room.city].filter(Boolean).join(', ') || 'रूम'));
+  const tags = el('div');
+  [room.room_type, room.gender].filter(Boolean)
+    .forEach(value => tags.append(el('span', 'tag', value)));
+  if (room.featured) tags.append(el('span', 'tag feat', 'Featured'));
+  if (room.hidden) tags.append(el('span', 'tag feat', 'लपवलेली'));
+  if (room.featured_requested && !room.featured) {
+    tags.append(el('span', 'tag', 'Featured विनंती'));
   }
-  if (r.photos.length) {
-    const urls = r.photos.map(photoUrl);
-    const g = el('div', 'gal');
-    urls.forEach((u, k) => {
-      const i = el('img');
-      i.src = u;
-      i.loading = 'lazy';
-      i.alt = 'रूमचा फोटो ' + (k + 1) + ' (मोठा करायला दाबा)';
-      i.tabIndex = 0;
-      i.setAttribute('role', 'button');
-      i.addEventListener('click', () => openLightbox(urls, k));
-      i.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(urls, k); });
-      g.append(i);
+  details.append(tags);
+  top.append(details, el('div', 'price', '₹' + room.rent.toLocaleString('en-IN') + '/महिना'));
+  container.append(top);
+
+  const statusLabels = {
+    available: 'उपलब्ध (रिकामी)',
+    rented: 'भाड्याने गेलेली',
+    inactive: 'निष्क्रिय'
+  };
+  container.append(el('span', 'room-status-badge room-status-' + status, statusLabels[status]));
+
+  if (room.deposit) {
+    container.append(el('div', 'mut', 'डिपॉझिट: ₹' + room.deposit.toLocaleString('en-IN')));
+  }
+  if (room.college) container.append(el('div', 'mut', room.college + ' जवळ'));
+  if (room.featured && Number.isFinite(distance)) {
+    container.append(el('div', 'mut', 'तुमच्यापासून सुमारे ' + distance.toFixed(1) + ' किमी'));
+  }
+
+  if (room.amenities.length) {
+    const amenityRow = el('div');
+    room.amenities.forEach(value => amenityRow.append(el('span', 'tag', value)));
+    container.append(amenityRow);
+  }
+
+  if (room.photos.length) {
+    const urls = room.photos.map(photoUrl);
+    const gallery = el('div', 'gal');
+    urls.forEach((url, index) => {
+      const image = el('img');
+      image.src = url;
+      image.loading = 'lazy';
+      image.alt = 'रूमचा फोटो ' + (index + 1) + ' (मोठा करायला दाबा)';
+      image.tabIndex = 0;
+      image.setAttribute('role', 'button');
+      image.addEventListener('click', () => openLightbox(urls, index));
+      image.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openLightbox(urls, index);
+        }
+      });
+      gallery.append(image);
     });
-    c.append(g);
+    container.append(gallery);
   }
-  if (r.description) c.append(el('p', '', r.description));
 
-  const acts = el('div', 'row acts');
-  const add = (t, cls, fn) => {
-    const b = el('button', cls, t);
-    b.addEventListener('click', fn);
-    acts.append(b);
-    return b;
+  if (room.description) container.append(el('p', '', room.description));
+
+  const actions = el('div', 'row acts');
+  const addButton = (label, className, handler) => {
+    const button = el('button', className, label);
+    button.type = 'button';
+    button.addEventListener('click', handler);
+    actions.append(button);
+    return button;
   };
-  const link = (t, cls, href) => {
-    const a = el('a', cls, t);
-    a.href = href;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    acts.append(a);
+  const addLink = (label, className, href) => {
+    const link = makeLink(label, className, href);
+    actions.append(link);
+    return link;
   };
 
-  const ct = S.contacts[r.id];
-  const exp = S.unlocks[r.id];
-  const l2 = locOf(r);
+  const contact = S.contacts[room.id];
+  const expiresAt = S.unlocks[room.id];
+  const location = locOf(room);
+  const paymentOff = isPaymentOff();
+  const isOwner = Boolean(S.user && room.owner_id === S.user.id);
+  const canSeeContact = Boolean(contact && (isOwner || (S.user && (paymentOff || expiresAt))));
 
   if (status === 'rented') {
-    c.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
+    container.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
   } else if (status === 'inactive') {
-    c.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
-  } else if (ct) {
+    container.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
+  } else if (canSeeContact) {
     const box = el('div', 'unlock');
-    box.append(el('strong', '', ct.owner_name + ' • ' + ct.phone), el('div', '', ct.address));
-    if (exp) {
-      const t = el('div', 'mut');
-      t.dataset.exp = exp;
-      box.append(t);
+    box.append(
+      el('strong', '', (contact.owner_name || 'रूम मालक') + (contact.phone ? ' • ' + contact.phone : '')),
+      el('div', '', contact.address || 'पत्ता उपलब्ध नाही')
+    );
+    if (!paymentOff && expiresAt && !isOwner) {
+      const countdown = el('div', 'mut');
+      countdown.dataset.exp = expiresAt;
+      box.append(countdown);
     }
-    c.append(box);
-    link('WhatsApp', 'btn', 'https://wa.me/' + ct.phone + '?text=' + encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?'));
-    link('Call', 'btn ghost', 'tel:+' + ct.phone);
-    if (r.featured && l2) {
-      link('Maps वर पहा', 'btn ghost', 'https://www.google.com/maps?q=' + l2.lat + ',' + l2.lng);
+    container.append(box);
+
+    if (contact.phone) {
+      const phoneDigits = String(contact.phone).replace(/\D/g, '');
+      addLink('WhatsApp', 'btn',
+        'https://wa.me/' + phoneDigits + '?text=' +
+        encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?'));
+      addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
     }
-  } else {
-    acts.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
-    const pb = add(
+    if (room.featured && location) {
+      addLink('Maps वर पहा', 'btn ghost',
+        'https://www.google.com/maps?q=' + location.lat + ',' + location.lng);
+    }
+  } else if (!isOwner) {
+    if (!paymentOff) actions.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
+    const fee = (Number(S.settings.view_fee_paise) || 0) / 100;
+    const minutes = Number(S.settings.unlock_minutes) || 30;
+    const paymentButton = addButton(
       S.user
-        ? 'संपर्क आणि पत्ता पहा – ₹' + (S.settings.view_fee_paise / 100) + ' (' + S.settings.unlock_minutes + ' मिनिटे)'
-        : 'संपर्कासाठी login करा',
-      '',
-      () => { if (S.user) pay(r, pb); else $('authBtn').click(); }
+        ? (paymentOff ? 'संपर्क आणि पत्ता पहा' : 'संपर्क आणि पत्ता पहा – ₹' + fee + ' (' + minutes + ' मिनिटे)')
+        : 'संपर्क आणि पत्ता पाहण्यासाठी login करा',
+      'btn',
+      () => {
+        if (!S.user) $('authBtn')?.click();
+        else if (!paymentOff) pay(room, paymentButton);
+        else {
+          setStatus('संपर्क माहिती उपलब्ध करण्यासाठी डेटाबेसची contact-access policy तपासा.');
+          loadContactsFor([room]).then(render);
+        }
+      }
     );
   }
 
   if (S.user) {
-    add(S.favorites.has(r.id) ? 'Saved' : 'Save', 'ghost', async () => {
-      if (S.favorites.has(r.id)) {
-        await sb.from('favorites').delete().eq('room_id', r.id).eq('user_id', S.user.id);
-        S.favorites.delete(r.id);
+    addButton(S.favorites.has(room.id) ? 'Saved' : 'Save', 'ghost', async () => {
+      if (S.favorites.has(room.id)) {
+        const { error } = await sb.from('favorites').delete()
+          .eq('room_id', room.id).eq('user_id', S.user.id);
+        if (error) return alert('Saved काढता आले नाही: ' + error.message);
+        S.favorites.delete(room.id);
       } else {
-        await sb.from('favorites').insert({ room_id: r.id, user_id: S.user.id });
-        S.favorites.add(r.id);
+        const { error } = await sb.from('favorites').insert({
+          room_id: room.id,
+          user_id: S.user.id
+        });
+        if (error) return alert('Save करता आले नाही: ' + error.message);
+        S.favorites.add(room.id);
       }
-      if (S.favOnly) loadRooms();
+      if (S.favOnly) await loadRooms(true);
       else render();
     });
 
-    if (r.owner_id !== S.user.id) {
-      add('तक्रार करा', 'ghost', async () => {
+    if (!isOwner) {
+      addButton('तक्रार करा', 'ghost', async () => {
         const reason = prompt('काय चुकीचं आहे? (थोडक्यात लिहा)');
         if (!reason || reason.trim().length < 3) return;
-        const { error } = await sb.from('reports').insert({ room_id: r.id, reason: reason.trim().slice(0, 300) });
-        alert(error ? 'तक्रार पाठवता आली नाही' : 'तक्रार नोंदवली, धन्यवाद');
+        const { error } = await sb.from('reports').insert({
+          room_id: room.id,
+          reason: reason.trim().slice(0, 300),
+          user_id: S.user.id
+        });
+        alert(error ? 'तक्रार पाठवता आली नाही: ' + error.message : 'तक्रार नोंदवली, धन्यवाद');
       });
     }
   }
 
-  if (S.user && r.owner_id === S.user.id) {
-    const isRented = status === 'rented';
-    add(isRented ? 'पुन्हा उपलब्ध' : 'भाड्याने गेली', 'ghost', async () => {
-      const nextRented = !isRented;
-      await sb
-        .from('rooms')
-        .update({ rented: nextRented, status: nextRented ? 'rented' : 'available' })
-        .eq('id', r.id);
-      await load();
+  if (isOwner) {
+    const rented = status === 'rented';
+    addButton(rented ? 'पुन्हा उपलब्ध' : 'भाड्याने गेली', 'ghost', async () => {
+      const { error } = await sb.from('rooms')
+        .update({ rented: !rented, status: rented ? 'available' : 'rented' })
+        .eq('id', room.id).eq('owner_id', S.user.id);
+      if (error) alert('स्टेटस बदलता आला नाही: ' + error.message);
+      else await load();
     });
 
-    if (!r.featured && !r.featured_requested) {
-      add('Featured साठी विनंती', 'ghost', async () => {
-        await sb.from('rooms').update({ featured_requested: true }).eq('id', r.id);
-        await load();
+    if (!room.featured && !room.featured_requested) {
+      addButton('Featured साठी विनंती', 'ghost', async () => {
+        const { error } = await sb.from('rooms')
+          .update({ featured_requested: true })
+          .eq('id', room.id).eq('owner_id', S.user.id);
+        if (error) alert('विनंती पाठवता आली नाही: ' + error.message);
+        else await load();
       });
     }
 
-    const del = add('Delete', 'ghost', async () => {
-      if (!del.dataset.s) {
-        del.dataset.s = '1';
-        del.textContent = 'खात्री? पुन्हा दाबा';
+    let deleteConfirm = false;
+    addButton('Delete', 'ghost', async event => {
+      // Two-step confirmation avoids accidental deletion.
+      if (!deleteConfirm) {
+        deleteConfirm = true;
+        event.currentTarget.textContent = 'खात्री? पुन्हा दाबा';
         return;
       }
-      if (r.photos.length) await sb.storage.from('room-photos').remove(r.photos);
-      await sb.from('rooms').delete().eq('id', r.id);
-      await load();
+      if (!confirm('ही रूम कायमची delete करायची आहे का?')) return;
+      if (room.photos.length) {
+        const storageResult = await sb.storage.from('room-photos').remove(room.photos);
+        if (storageResult.error) console.warn('Photo cleanup:', storageResult.error);
+      }
+      const { error } = await sb.from('rooms').delete()
+        .eq('id', room.id).eq('owner_id', S.user.id);
+      if (error) alert('रूम delete झाली नाही: ' + error.message);
+      else await load();
     });
   }
 
-  c.append(acts);
-  return c;
+  container.append(actions);
+  return container;
 }
 
-/* ---------- Post ---------- */
-async function post() {
-  if (!S.user) { $('msg').textContent = 'आधी login करा.'; return; }
-  const v = id => $(id).value.trim();
-  const phone = normPhone(v('f_phone'));
-  const rent = Number(v('f_rent')) || 0;
-  if (v('f_city').length < 2 || v('f_area').length < 2 || !rent || v('f_name').length < 2 || v('f_address').length < 5) {
-    $('msg').textContent = 'शहर, एरिया, भाडे, नाव आणि पूर्ण पत्ता आवश्यक आहे.';
-    return;
-  }
-  if (!$('f_terms').checked) { $('msg').textContent = 'अटी मान्य करण्यासाठी बॉक्स टिक करा.'; return; }
-  if (!/^91[6-9]\d{9}$/.test(phone)) { $('msg').textContent = 'योग्य 10 अंकी मोबाईल नंबर टाका.'; return; }
-
-  const btn = $('save');
-  btn.disabled = true;
-  btn.classList.add('busy');
-  $('msg').textContent = 'Post होत आहे…';
-  const up = [];
-  try {
-    for (const f of [...$('f_photos').files].slice(0, 3)) {
-      const p = S.user.id + '/' + crypto.randomUUID() + '.jpg';
-      const { error } = await sb.storage.from('room-photos').upload(p, await shrink(f), { contentType: 'image/jpeg' });
-      if (error) throw error;
-      up.push(p);
-    }
-    const { data: room, error } = await sb.from('rooms').insert({
-      city: v('f_city'),
-      area: v('f_area'),
-      college: v('f_college') || null,
-      rent,
-      deposit: Number(v('f_dep')) || null,
-      room_type: v('f_type'),
-      gender: v('f_gender'),
-      amenities: amVals('f_am'),
-      description: v('f_desc') || null,
-      photos: up,
-      rented: false,
-      status: 'available',
-      owner_id: S.user.id
-    }).select().single();
-    if (error) throw error;
-
-    const c = await sb.from('room_contacts').insert({
-      room_id: room.id,
-      owner_name: v('f_name'),
-      phone,
-      address: v('f_address')
-    });
-    if (c.error) {
-      await sb.from('rooms').delete().eq('id', room.id);
-      throw c.error;
-    }
-    if (S.loc) {
-      await sb.from('room_locations').insert({ room_id: room.id, lat: S.loc.lat, lng: S.loc.lng });
-    }
-    $('msg').textContent = 'रूम प्रसिद्ध झाली.';
-    ['f_city', 'f_area', 'f_college', 'f_rent', 'f_dep', 'f_desc', 'f_name', 'f_phone', 'f_address', 'f_photos'].forEach(i => {
-      $(i).value = '';
-    });
-    $('f_terms').checked = false;
-    $('f_am').querySelectorAll('input').forEach(i => { i.checked = false; });
-    S.loc = null;
-    $('locMsg').textContent = '';
-    await load();
-  } catch (e) {
-    if (up.length) await sb.storage.from('room-photos').remove(up);
-    $('msg').textContent = 'Post करता आले नाही: ' + (e.message || e);
-  }
-  btn.disabled = false;
-  btn.classList.remove('busy');
-}
-
-/* ---------- Events ---------- */
-['q', 'college', 'type', 'gender', 'max'].forEach(id => $(id).addEventListener('input', reloadSoon));
-$('moreBtn').addEventListener('click', () => { S.page++; loadRooms(false); });
-$('sort').addEventListener('input', async () => {
-  if ($('sort').value === 'near' && !S.me) {
-    try { S.me = await getLoc(); }
-    catch (e) { setStatus('लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.'); return; }
-  }
-  loadRooms();
-});
-$('favBtn').addEventListener('click', () => {
-  S.favOnly = !S.favOnly;
-  $('favBtn').textContent = S.favOnly ? 'Saved (चालू)' : 'Saved';
-  loadRooms();
-});
-['all', 'mine'].forEach(v => $('v_' + v).addEventListener('click', () => { S.view = v; loadRooms(); }));
-$('addBtn').addEventListener('click', () => {
-  if (!S.user) { $('authBtn').click(); return; }
-  $('form').classList.toggle('hide');
-});
-$('locBtn').addEventListener('click', async () => {
-  $('locMsg').textContent = 'लोकेशन घेत आहे…';
-  try {
-    S.loc = await getLoc();
-    $('locMsg').textContent = 'लोकेशन मिळाली';
-  } catch (e) {
-    S.loc = null;
-    $('locMsg').textContent = 'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
-  }
-});
-$('save').addEventListener('click', post);
-mkAm('f_am');
-mkAm('s_am', reloadSoon);
-document.querySelectorAll('[data-brand]').forEach(e => { e.textContent = CONFIG.BRAND || e.textContent; });
-
-/* ---------- Razorpay Payment ---------- */
-function loadRzp() {
-  return new Promise((ok, bad) => {
-    if (window.Razorpay) return ok();
-    const s = document.createElement('script');
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    s.onload = ok;
-    s.onerror = () => bad(new Error('पेमेंट विंडो लोड झाली नाही'));
-    document.head.append(s);
+function getLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('लोकेशन उपलब्ध नाही'));
+    navigator.geolocation.getCurrentPosition(
+      position => resolve({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      }),
+      reject,
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   });
 }
 
-async function pay(r, btn) {
-  btn.disabled = true;
-  btn.classList.add('busy');
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      const scale = Math.min(1, 1000 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      const context = canvas.getContext('2d');
+      if (!context) {
+        URL.revokeObjectURL(objectUrl);
+        return reject(new Error('फोटो प्रक्रिया करता आली नाही'));
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      canvas.toBlob(blob => blob
+        ? resolve(blob)
+        : reject(new Error('फोटो प्रक्रिया अयशस्वी')), 'image/jpeg', 0.8);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('हा फोटो वाचता आला नाही'));
+    };
+    image.src = objectUrl;
+  });
+}
+async function postRoom() {
+  if (!S.user) {
+    $('msg').textContent = 'आधी Google ने login करा.';
+    return;
+  }
+
+  const value = id => $(id)?.value?.trim() || '';
+  const phone = normPhone(value('f_phone'));
+  const rent = Number(value('f_rent')) || 0;
+
+  if (value('f_city').length < 2 || value('f_area').length < 2 ||
+      rent <= 0 || value('f_name').length < 2 || value('f_address').length < 5) {
+    $('msg').textContent = 'शहर, एरिया, भाडे, नाव आणि पूर्ण पत्ता आवश्यक आहे.';
+    return;
+  }
+  if (!$('f_terms').checked) {
+    $('msg').textContent = 'अटी मान्य करण्यासाठी बॉक्स टिक करा.';
+    return;
+  }
+  if (!/^91[6-9]\d{9}$/.test(phone)) {
+    $('msg').textContent = 'योग्य 10 अंकी मोबाईल नंबर टाका.';
+    return;
+  }
+
+  const button = $('save');
+  button.disabled = true;
+  button.classList.add('busy');
+  $('msg').textContent = 'रूम प्रसिद्ध होत आहे…';
+  const uploaded = [];
+
   try {
-    await loadRzp();
-    const { data, error } = await sb.functions.invoke('create-order', { body: { room_id: r.id } });
-    if (error || !data || data.error) throw new Error((data && data.error) || 'पेमेंट सुरू करता आले नाही');
-    await new Promise((ok, bad) => {
-      const rz = new Razorpay({
+    const files = [...($('f_photos').files || [])].slice(0, 3);
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) throw new Error('फक्त image फोटो निवडा.');
+      const path = S.user.id + '/' + crypto.randomUUID() + '.jpg';
+      const { error } = await sb.storage.from('room-photos')
+        .upload(path, await shrinkImage(file), { contentType: 'image/jpeg' });
+      if (error) throw error;
+      uploaded.push(path);
+    }
+
+    const { data: room, error: roomError } = await sb.from('rooms').insert({
+      city: value('f_city'),
+      area: value('f_area'),
+      college: value('f_college') || null,
+      rent,
+      deposit: Number(value('f_dep')) || null,
+      room_type: value('f_type'),
+      gender: value('f_gender'),
+      amenities: getAmenityValues('f_am'),
+      description: value('f_desc') || null,
+      photos: uploaded,
+      rented: false,
+      hidden: false,
+      status: 'available',
+      owner_id: S.user.id
+    }).select().single();
+    if (roomError) throw roomError;
+
+    const { error: contactError } = await sb.from('room_contacts').insert({
+      room_id: room.id,
+      owner_name: value('f_name'),
+      phone,
+      address: value('f_address')
+    });
+    if (contactError) {
+      await sb.from('rooms').delete().eq('id', room.id);
+      throw contactError;
+    }
+
+    if (S.loc) {
+      const { error: locationError } = await sb.from('room_locations').insert({
+        room_id: room.id,
+        lat: S.loc.lat,
+        lng: S.loc.lng
+      });
+      if (locationError) console.warn('Location save failed:', locationError);
+    }
+
+    $('msg').textContent = 'रूम प्रसिद्ध झाली.';
+    ['f_city', 'f_area', 'f_college', 'f_rent', 'f_dep', 'f_desc',
+      'f_name', 'f_phone', 'f_address', 'f_photos'].forEach(id => {
+      if ($(id)) $(id).value = '';
+    });
+    $('f_terms').checked = false;
+    $('f_am').querySelectorAll('input').forEach(input => { input.checked = false; });
+    S.loc = null;
+    $('locMsg').textContent = '';
+    await load();
+  } catch (error) {
+    if (uploaded.length) {
+      await sb.storage.from('room-photos').remove(uploaded);
+    }
+    $('msg').textContent = 'Post करता आली नाही: ' + (error.message || error);
+  } finally {
+    button.disabled = false;
+    button.classList.remove('busy');
+  }
+}
+
+function loadRazorpay() {
+  return new Promise((resolve, reject) => {
+    if (window.Razorpay) return resolve();
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('पेमेंट विंडो लोड झाली नाही'));
+    document.head.append(script);
+  });
+}
+
+async function pay(room, button) {
+  if (!S.user) return $('authBtn')?.click();
+  button.disabled = true;
+  button.classList.add('busy');
+
+  try {
+    await loadRazorpay();
+    const { data, error } = await sb.functions.invoke('create-order', {
+      body: { room_id: room.id }
+    });
+    if (error || !data || data.error) {
+      throw new Error(data?.error || error?.message || 'पेमेंट सुरू करता आले नाही');
+    }
+
+    await new Promise((resolve, reject) => {
+      const checkout = new window.Razorpay({
         key: data.key_id,
         order_id: data.order_id,
         amount: data.amount,
         currency: 'INR',
         name: CONFIG.BRAND || 'Room Finder',
-        description: 'घरमालकाचा संपर्क आणि पत्ता (' + S.settings.unlock_minutes + ' मिनिटे)',
-        prefill: { email: S.user.email },
+        description: 'घरमालकाचा संपर्क आणि पत्ता (' +
+          (Number(S.settings.unlock_minutes) || 30) + ' मिनिटे)',
+        prefill: { email: S.user.email || '' },
         theme: { color: '#0e5a8a' },
-        handler: ok,
-        modal: { ondismiss: () => bad(new Error('पेमेंट रद्द झाले')) }
+        handler: resolve,
+        modal: { ondismiss: () => reject(new Error('पेमेंट रद्द झाले')) }
       });
-      rz.on('payment.failed', () => bad(new Error('पेमेंट अयशस्वी झाले')));
-      rz.open();
+      checkout.on('payment.failed', () => reject(new Error('पेमेंट अयशस्वी झाले')));
+      checkout.open();
     });
+
     setStatus('पेमेंट मिळाले, माहिती उघडत आहे…');
-    for (let i = 0; i < 20; i++) {
-      await new Promise(t => setTimeout(t, 1500));
+    // Webhook verifies payment and creates the unlock. Poll the database, not the browser callback.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
       if (!S.user) throw new Error('Login session संपली आहे. पुन्हा login करा.');
       await refreshUserData();
-      if (S.unlocks[r.id]) {
-        await loadContactsFor(S.rooms);
+      if (S.unlocks[room.id]) {
+        await loadContactsFor([room]);
         render();
         setStatus('संपर्क माहिती उघडली आहे.');
         return;
       }
     }
-    setStatus('पेमेंट झाले आहे, पण माहिती उघडायला उशीर होत आहे. पान refresh करा.');
-  } catch (e) {
-    setStatus(e.message || 'पेमेंट झाले नाही');
+    setStatus('पेमेंट झाले आहे, पण माहिती उघडायला उशीर होत आहे. थोड्या वेळाने refresh करा.');
+  } catch (error) {
+    setStatus(error.message || 'पेमेंट करताना त्रुटी आली');
   } finally {
-    btn.disabled = false;
-    btn.classList.remove('busy');
+    button.disabled = false;
+    button.classList.remove('busy');
   }
 }
 
-/* ---------- Unlock Countdown ---------- */
-setInterval(() => {
-  let expired = false;
-  document.querySelectorAll('[data-exp]').forEach(t => {
-    const s = Math.floor((new Date(t.dataset.exp) - Date.now()) / 1000);
-    if (s <= 0) { expired = true; return; }
-    t.textContent = 'बाकी वेळ ' + String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0') + ' – नंतर ही माहिती लपेल';
-  });
-  if (expired && Date.now() - (S.last || 0) > 5000) {
-    S.last = Date.now();
-    load(true);
-  }
-}, 1000);
+function openLightbox(urls, startIndex) {
+  if (!urls.length) return;
+  let index = startIndex;
+  let zoomed = false;
+  let touchStartX = 0;
 
-/* ---------- स्केलेटन लोडिंग आणि फोटो लाइटबॉक्स ---------- */
-function showSkeleton(n = 3) {
-  const l = $('list');
-  l.textContent = '';
-  $('moreBtn').classList.add('hide');
-  setStatus('रूम शोधत आहे…');
-  for (let k = 0; k < n; k++) {
-    const c = el('div', 'card skel');
-    c.setAttribute('aria-hidden', 'true');
-    [['100%', 160], ['55%', 18], ['35%', 14], ['80%', 14]].forEach(([w, h]) => {
-      const i = el('i');
-      i.style.width = w;
-      i.style.height = h + 'px';
-      c.append(i);
-    });
-    l.append(c);
-  }
-}
+  const overlay = el('div', 'lb');
+  const stage = el('div', 'lb-stage');
+  const image = el('img');
+  const caption = el('div', 'lb-cap');
+  const closeButton = el('button', 'lb-x', '✕');
+  const previousButton = el('button', 'lb-nav lb-p', '‹');
+  const nextButton = el('button', 'lb-nav lb-n', '›');
 
-function openLightbox(urls, start) {
-  let i = start, zoom = false, sx = 0;
-  const ov = el('div', 'lb'), stage = el('div', 'lb-stage'), img = el('img'), cap = el('div', 'lb-cap');
-  const x = el('button', 'lb-x', '✕'), prev = el('button', 'lb-nav lb-p', '‹'), next = el('button', 'lb-nav lb-n', '›');
-  ov.setAttribute('role', 'dialog');
-  ov.setAttribute('aria-label', 'फोटो पहा');
-  x.setAttribute('aria-label', 'बंद करा');
-  prev.setAttribute('aria-label', 'मागील फोटो');
-  next.setAttribute('aria-label', 'पुढील फोटो');
-  const show = n => {
-    i = (n + urls.length) % urls.length;
-    img.src = urls[i];
-    zoom = false;
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'फोटो पहा');
+  closeButton.setAttribute('aria-label', 'बंद करा');
+  previousButton.setAttribute('aria-label', 'मागील फोटो');
+  nextButton.setAttribute('aria-label', 'पुढील फोटो');
+
+  const show = nextIndex => {
+    index = (nextIndex + urls.length) % urls.length;
+    image.src = urls[index];
+    zoomed = false;
     stage.classList.remove('zoom');
-    cap.textContent = (i + 1) + ' / ' + urls.length + ' • मोठं करायला फोटोवर दाबा';
-  };
-  const key = e => {
-    if (e.key === 'Escape') close();
-    else if (e.key === 'ArrowLeft') show(i - 1);
-    else if (e.key === 'ArrowRight') show(i + 1);
+    caption.textContent = (index + 1) + ' / ' + urls.length +
+      ' • मोठं करायला फोटोवर दाबा';
   };
   const close = () => {
-    document.removeEventListener('keydown', key);
-    ov.remove();
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
     document.body.style.overflow = '';
   };
-  img.addEventListener('click', () => { zoom = !zoom; stage.classList.toggle('zoom', zoom); });
-  ov.addEventListener('click', e => { if (e.target === ov || e.target === stage) close(); });
-  x.addEventListener('click', close);
-  prev.addEventListener('click', () => show(i - 1));
-  next.addEventListener('click', () => show(i + 1));
-  stage.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
-  stage.addEventListener('touchend', e => {
-    const d = e.changedTouches[0].clientX - sx;
-    if (!zoom && Math.abs(d) > 60 && urls.length > 1) show(i + (d < 0 ? 1 : -1));
+  const onKey = event => {
+    if (event.key === 'Escape') close();
+    else if (event.key === 'ArrowLeft') show(index - 1);
+    else if (event.key === 'ArrowRight') show(index + 1);
+  };
+
+  image.addEventListener('click', () => {
+    zoomed = !zoomed;
+    stage.classList.toggle('zoom', zoomed);
   });
-  if (urls.length < 2) { prev.hidden = true; next.hidden = true; }
-  stage.append(img);
-  ov.append(stage, x, prev, next, cap);
-  document.body.append(ov);
-  document.body.style.overflow = 'hidden';
-  document.addEventListener('keydown', key);
-  show(start);
-  x.focus();
-}
-const ct = S.contacts[r.id];
-const exp = S.unlocks[r.id];
-const l2 = locOf(r);
-const paymentOff = isPaymentOff();
-
-if (status === 'rented') {
-  c.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
-} else if (status === 'inactive') {
-  c.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
-} else if (S.user && ct && (paymentOff || exp)) {
-  const box = el('div', 'unlock');
-  box.append(
-    el('strong', '', ct.owner_name + ' • ' + ct.phone),
-    el('div', '', ct.address)
-  );
-
-  if (!paymentOff && exp) {
-    const t = el('div', 'mut');
-    t.dataset.exp = exp;
-    box.append(t);
-  }
-
-  c.append(box);
-
-  link('WhatsApp', 'btn',
-    'https://wa.me/' + ct.phone + '?text=' +
-    encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?'));
-
-  link('Call', 'btn ghost', 'tel:+' + ct.phone);
-
-  if (r.featured && l2) {
-    link('Maps वर पहा', 'btn ghost',
-      'https://www.google.com/maps?q=' + l2.lat + ',' + l2.lng);
-  }
-} else {
-  if (!paymentOff) {
-    acts.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
-  }
-
-  const pb = add(
-    S.user
-      ? 'संपर्क आणि पत्ता पहा – ₹' + (S.settings.view_fee_paise / 100) +
-        ' (' + S.settings.unlock_minutes + ' मिनिटे)'
-      : 'संपर्क आणि पत्ता पाहण्यासाठी login करा',
-    '',
-    () => {
-      if (S.user) pay(r, pb);
-      else $('authBtn').click();
+  overlay.addEventListener('click', event => {
+    if (event.target === overlay || event.target === stage) close();
+  });
+  closeButton.addEventListener('click', close);
+  previousButton.addEventListener('click', () => show(index - 1));
+  nextButton.addEventListener('click', () => show(index + 1));
+  stage.addEventListener('touchstart', event => {
+    touchStartX = event.touches[0].clientX;
+  }, { passive: true });
+  stage.addEventListener('touchend', event => {
+    const delta = event.changedTouches[0].clientX - touchStartX;
+    if (!zoomed && Math.abs(delta) > 60 && urls.length > 1) {
+      show(index + (delta < 0 ? 1 : -1));
     }
-  );
+  });
+  if (urls.length < 2) {
+    previousButton.hidden = true;
+    nextButton.hidden = true;
+  }
+
+  stage.append(image);
+  overlay.append(stage, closeButton, previousButton, nextButton, caption);
+  document.body.append(overlay);
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', onKey);
+  show(startIndex);
+  closeButton.focus();
 }
+
+function startCountdown() {
+  setInterval(() => {
+    let hasExpired = false;
+    document.querySelectorAll('[data-exp]').forEach(node => {
+      const seconds = Math.floor((new Date(node.dataset.exp).getTime() - Date.now()) / 1000);
+      if (seconds <= 0) {
+        hasExpired = true;
+        return;
+      }
+      node.textContent = 'बाकी वेळ ' +
+        String(Math.floor(seconds / 60)).padStart(2, '0') + ':' +
+        String(seconds % 60).padStart(2, '0') +
+        ' – नंतर ही माहिती लपेल';
+    });
+    if (hasExpired && Date.now() - S.last > 5000) {
+      S.last = Date.now();
+      load(true);
+    }
+  }, 1000);
+}
+
+function bindEvents() {
+  ['q', 'college', 'type', 'gender', 'max'].forEach(id => {
+    $(id)?.addEventListener('input', reloadSoon);
+    $(id)?.addEventListener('change', reloadSoon);
+  });
+
+  $('sort')?.addEventListener('change', async () => {
+    if ($('sort').value === 'near' && !S.me) {
+      try {
+        S.me = await getLocation();
+      } catch (_) {
+        setStatus('लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.');
+        return;
+      }
+    }
+    await loadRooms(true);
+  });
+
+  $('moreBtn')?.addEventListener('click', () => {
+    if (!S.more) return;
+    S.page += 1;
+    loadRooms(false);
+  });
+
+  $('v_all')?.addEventListener('click', () => {
+    S.view = 'all';
+    S.favOnly = false;
+    loadRooms(true);
+  });
+  $('v_mine')?.addEventListener('click', () => {
+    if (!S.user) return;
+    S.view = 'mine';
+    S.favOnly = false;
+    loadRooms(true);
+  });
+
+  $('favBtn')?.addEventListener('click', () => {
+    S.favOnly = !S.favOnly;
+    $('favBtn').textContent = S.favOnly ? 'Saved (चालू)' : 'Saved';
+    loadRooms(true);
+  });
+
+  const openForm = () => {
+    if (!S.user) {
+      $('authBtn')?.click();
+      return;
+    }
+    $('form')?.classList.toggle('hide');
+    if (!$('form')?.classList.contains('hide')) {
+      $('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+  $('addBtn')?.addEventListener('click', openForm);
+  $('addBtn2')?.addEventListener('click', openForm);
+
+  $('locBtn')?.addEventListener('click', async () => {
+    $('locMsg').textContent = 'लोकेशन घेत आहे…';
+    try {
+      S.loc = await getLocation();
+      $('locMsg').textContent = 'लोकेशन मिळाली';
+    } catch (_) {
+      S.loc = null;
+      $('locMsg').textContent = 'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
+    }
+  });
+
+  $('save')?.addEventListener('click', postRoom);
+
+  $('authBtn')?.addEventListener('click', async () => {
+    if (S.user) {
+      const { error } = await sb.auth.signOut();
+      if (error) alert('Logout करता आले नाही: ' + error.message);
+      return;
+    }
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname }
+    });
+    if (error) alert('Google login सुरू झाले नाही: ' + error.message);
+  });
+}
+
+async function init() {
+  loadFavs();
+  buildAmenityChecks('f_am');
+  buildAmenityChecks('s_am', reloadSoon);
+  document.querySelectorAll('[data-brand]').forEach(node => {
+    node.textContent = CONFIG.BRAND || node.textContent;
+  });
+
+  bindEvents();
+
+  const { data, error } = await sb.auth.getSession();
+  if (error) console.warn('Session error:', error);
+  S.user = data?.session?.user || null;
+  await afterAuth();
+
+  sb.auth.onAuthStateChange((_event, session) => {
+    S.user = session?.user || null;
+    // Defer database work until Supabase finishes its auth event callback.
+    setTimeout(() => afterAuth(), 0);
+  });
+
+  startCountdown();
+}
+
+document.addEventListener('DOMContentLoaded', init);
