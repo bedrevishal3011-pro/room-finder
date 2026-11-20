@@ -38,7 +38,471 @@ const km = (a, b, c, d) => {
 const locOf = r => {
   const l = Array.isArray(r.room_locations) ? r.room_locations[0] : r.room_locations;
   return l || null;
+};const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+const el = (t, c, x, attrs = {}) => {
+  const e = document.createElement(t);
+  if (c) e.className = c;
+  if (x != null) e.textContent = x;
+  Object.assign(e, attrs);
+  return e;
 };
+const AM = ['Wi-Fi', 'जेवण', 'AC', 'वॉशिंग मशीन', 'पार्किंग', 'वीज बिल समाविष्ट'];
+const S = {
+  req: 0,
+  page: 0,
+  more: false,
+  counts: { total: 0, rented: 0 },
+  unlocks: {},
+  settings: { view_fee_paise: 4900, unlock_minutes: 30 },
+  user: null,
+  admin: false,
+  rooms: [],
+  contacts: {},
+  favorites: new Set(),
+  favOnly: false,
+  view: 'all',
+  me: null,
+  loc: null
+};
+
+function isPaymentOff() {
+  const s = S.settings || {};
+  if (s.payment_enabled === false) return true;
+  if (s.payment_off === true) return true;
+  if (s.view_fee_paise != null && Number(s.view_fee_paise) <= 0) return true;
+  return false;
+}
+
+function roomStatus(r) {
+  if (!r) return 'available';
+  if (r.hidden || r.status === 'inactive') return 'inactive';
+  if (r.status === 'rented' || r.rented === true) return 'rented';
+  return 'available';
+}
+
+function loadFavs() {
+  try {
+    const raw = localStorage.getItem('room_favs');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      S.favorites = new Set(arr);
+    }
+  } catch (e) {}
+}
+
+function saveFavs() {
+  try {
+    localStorage.setItem('room_favs', JSON.stringify([...S.favorites]));
+  } catch (e) {}
+}
+
+function toggleFav(id) {
+  if (S.favorites.has(id)) {
+    S.favorites.delete(id);
+  } else {
+    S.favorites.add(id);
+  }
+  saveFavs();
+  render();
+}
+
+function showCounts() {
+  const c = $('counts');
+  if (!c) return;
+  c.textContent = '';
+  const total = S.counts.total || 0;
+  const rented = S.counts.rented || 0;
+  const vacant = Math.max(0, total - rented);
+  [
+    ['एकूण रूम', total],
+    ['भाड्याने गेलेल्या', rented],
+    ['रिकाम्या रूम', vacant]
+  ].forEach(([l, v]) => {
+    const d = el('div');
+    d.append(el('b', '', v), el('span', '', l));
+    c.append(d);
+  });
+}
+
+async function loadMeta() {
+  const cnt = () => sb
+    .from('rooms')
+    .select('*', { count: 'exact', head: true })
+    .eq('hidden', false);
+
+  const [tc, rc, st] = await Promise.all([
+    cnt().or('status.is.null,status.neq.inactive'),
+    cnt().or('status.eq.rented,and(status.is.null,rented.eq.true)'),
+    sb.from('settings').select('*').maybeSingle()
+  ]);
+
+  if (!tc.error) S.counts.total = tc.count || 0;
+  if (!rc.error) S.counts.rented = rc.count || 0;
+  if (!st.error && st.data) S.settings = { ...S.settings, ...st.data };
+  showCounts();
+}
+
+async function loadContactsFor(rooms) {
+  if (!rooms || !rooms.length) return;
+
+  if (isPaymentOff()) {
+    const { data, error } = await sb
+      .from('room_contacts')
+      .select('room_id, owner_name, phone, address')
+      .in('room_id', rooms.map(r => r.id));
+
+    if (!error && data) {
+      data.forEach(c => {
+        S.contacts[c.room_id] = c;
+      });
+    }
+    return;
+  }
+
+  if (!S.user) return;
+  const { data, error } = await sb
+    .from('room_unlocks')
+    .select('room_id, expires_at')
+    .eq('user_id', S.user.id)
+    .gt('expires_at', new Date().toISOString());
+
+  if (error || !data || !data.length) return;
+
+  const unlockedIds = data.map(u => {
+    S.unlocks[u.room_id] = u.expires_at;
+    return u.room_id;
+  });
+
+  if (!unlockedIds.length) return;
+
+  const { data: contactsData } = await sb
+    .from('room_contacts')
+    .select('room_id, owner_name, phone, address')
+    .in('room_id', unlockedIds);
+
+  if (contactsData) {
+    contactsData.forEach(c => {
+      S.contacts[c.room_id] = c;
+    });
+  }
+}
+
+async function toggleRent(r) {
+  const curStatus = roomStatus(r);
+  const willBeRented = curStatus !== 'rented';
+  const newRented = willBeRented;
+  const newStatus = willBeRented ? 'rented' : 'available';
+
+  const { error } = await sb
+    .from('rooms')
+    .update({ rented: newRented, status: newStatus })
+    .eq('id', r.id);
+
+  if (!error) {
+    r.rented = newRented;
+    r.status = newStatus;
+    await loadMeta();
+    render();
+  } else {
+    alert('एरर आला: ' + (error.message || 'स्टेटस अपडेट होऊ शकले नाही'));
+  }
+}
+
+async function loadRooms(reset = false) {
+  if (reset) {
+    S.page = 0;
+    S.rooms = [];
+  }
+  const PAGE_SIZE = 12;
+  let b = sb.from('rooms').select('*');
+
+  if (S.view === 'mine' && S.user) {
+    b = b.eq('owner_id', S.user.id);
+  } else {
+    b = b.eq('hidden', false).eq('rented', false).or('status.is.null,status.eq.available');
+  }
+
+  const queryText = $('q')?.value?.trim();
+  if (queryText) {
+    b = b.or(`title.ilike.%${queryText}%,address.ilike.%${queryText}%,description.ilike.%${queryText}%`);
+  }
+
+  b = b.order('created_at', { ascending: false }).range(S.page * PAGE_SIZE, (S.page + 1) * PAGE_SIZE - 1);
+
+  const { data, error } = await b;
+  if (!error && data) {
+    S.more = data.length === PAGE_SIZE;
+    if (reset) S.rooms = data;
+    else S.rooms = S.rooms.concat(data);
+    await loadContactsFor(data);
+  }
+  render();
+}
+
+function locOf(r) {
+  if (r.lat && r.lng) return { lat: r.lat, lng: r.lng };
+  if (r.location && r.location.coordinates) {
+    return { lat: r.location.coordinates[1], lng: r.location.coordinates[0] };
+  }
+  return null;
+}
+
+function render() {
+  const list = $('list');
+  if (!list) return;
+  list.textContent = '';
+
+  let out = S.rooms || [];
+  if (S.view === 'mine') {
+    if (S.user) {
+      out = out.filter(r => r.owner_id === S.user.id);
+    } else {
+      out = [];
+    }
+  } else {
+    out = out.filter(r => roomStatus(r) === 'available' && !r.hidden);
+  }
+
+  if (S.favOnly) {
+    out = out.filter(r => S.favorites.has(r.id));
+  }
+
+  if (!out.length) {
+    list.append(el('div', 'empty', S.favOnly ? 'कोणतीही आवडती रूम नाही.' : 'एकही रूम सापडली नाही.'));
+    return;
+  }
+
+  out.forEach(r => list.append(card(r)));
+
+  const moreBtn = $('moreBtn');
+  if (moreBtn) {
+    moreBtn.style.display = S.more ? 'block' : 'none';
+  }
+}
+
+function card(r) {
+  const c = el('div', 'card');
+  const status = roomStatus(r);
+  const isOwner = S.user && r.owner_id === S.user.id;
+
+  const top = el('div', 'card-top');
+  const t = el('h3', '', r.title || 'रूम');
+  top.append(t);
+
+  const favBtn = el('button', 'fav-btn' + (S.favorites.has(r.id) ? ' active' : ''), S.favorites.has(r.id) ? '❤️' : '🤍');
+  favBtn.onclick = (e) => {
+    e.stopPropagation();
+    toggleFav(r.id);
+  };
+  top.append(favBtn);
+  c.append(top);
+
+  if (r.rent || r.deposit) {
+    const meta = el('div', 'meta');
+    if (r.rent) meta.append(el('span', 'price', '₹' + r.rent + '/महिना'));
+    if (r.deposit) meta.append(el('span', 'deposit', 'डिपॉझिट: ₹' + r.deposit));
+    c.append(meta);
+  }
+
+  if (r.description) {
+    c.append(el('p', 'desc', r.description));
+  }
+
+  if (r.amenities && Array.isArray(r.amenities) && r.amenities.length) {
+    const am = el('div', 'amenities');
+    r.amenities.forEach(a => am.append(el('span', 'tag', a)));
+    c.append(am);
+  }
+
+  const ct = S.contacts[r.id];
+  const exp = S.unlocks[r.id];
+  const l2 = locOf(r);
+  const paymentDisabled = isPaymentOff();
+
+  if (status === 'rented') {
+    c.append(el('span', 'tag feat', 'भाड्याने गेलेली आहे'));
+  } else if (status === 'inactive') {
+    c.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
+  } else if (paymentDisabled || ct) {
+    const box = el('div', 'unlock');
+    const ownerName = ct?.owner_name || r.owner_name || 'रूम मालक';
+    const phone = ct?.phone || r.phone || r.contact_phone || '';
+    const addr = ct?.address || r.address || r.full_address || 'पत्ता उपलब्ध आहे';
+
+    box.append(
+      el('strong', '', ownerName + (phone ? ' • ' + phone : '')),
+      el('div', '', addr)
+    );
+
+    if (exp && !paymentDisabled) {
+      const expDiv = el('div', 'mut');
+      expDiv.dataset.exp = exp;
+      box.append(expDiv);
+    }
+    c.append(box);
+
+    const acts = el('div', 'acts');
+    if (phone) {
+      const waMsg = encodeURIComponent('नमस्कार, Room Finder वर तुमची रूम पाहिली: ' + (r.title || ''));
+      acts.append(
+        el('a', 'btn', 'WhatsApp', { href: 'https://wa.me/' + phone.replace(/[^0-9]/g, '') + '?text=' + waMsg, target: '_blank' }),
+        el('a', 'btn ghost', 'Call', { href: 'tel:' + phone })
+      );
+    }
+    if (l2) {
+      acts.append(el('a', 'btn ghost', 'Maps वर पहा', { href: 'https://www.google.com/maps?q=' + l2.lat + ',' + l2.lng, target: '_blank' }));
+    }
+    c.append(acts);
+  } else {
+    const acts = el('div', 'acts');
+    acts.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
+    const feeRs = (S.settings.view_fee_paise || 4900) / 100;
+    const pb = el('button', 'btn', S.user
+      ? 'संपर्क आणि पत्ता पहा - ₹' + feeRs + ' (' + (S.settings.unlock_minutes || 30) + ' मिनिटे)'
+      : 'संपर्कासाठी login करा'
+    );
+    pb.onclick = () => {
+      if (S.user) pay(r, pb);
+      else $('authBtn')?.click();
+    };
+    acts.append(pb);
+    c.append(acts);
+  }
+
+  if (isOwner) {
+    const ownerActs = el('div', 'owner-acts');
+    const rentToggleBtn = el('button', 'btn ghost', status === 'rented' ? 'उपलब्ध आहे म्हणून मार्क करा' : 'भाड्याने गेली म्हणून मार्क करा');
+    rentToggleBtn.onclick = () => toggleRent(r);
+    ownerActs.append(rentToggleBtn);
+    c.append(ownerActs);
+  }
+
+  return c;
+}
+
+async function init() {
+  loadFavs();
+  await loadMeta();
+
+  sb.auth.onAuthStateChange((evt, sess) => {
+    S.user = sess?.user || null;
+    updateAuthUI();
+    loadRooms(true);
+  });
+
+  const { data: { session } } = await sb.auth.getSession();
+  S.user = session?.user || null;
+  updateAuthUI();
+  await loadRooms(true);
+
+  setupEventListeners();
+}
+
+function updateAuthUI() {
+  const authBtn = $('authBtn');
+  if (authBtn) {
+    authBtn.textContent = S.user ? 'Logout (' + (S.user.email || 'User') + ')' : 'Login / Sign up';
+  }
+  const mineTab = $('tabMine');
+  if (mineTab) {
+    mineTab.style.display = S.user ? 'inline-block' : 'none';
+  }
+}
+
+function setupEventListeners() {
+  $('tabAll')?.addEventListener('click', () => {
+    S.view = 'all';
+    $('tabAll').classList.add('active');
+    $('tabMine')?.classList.remove('active');
+    loadRooms(true);
+  });
+
+  $('tabMine')?.addEventListener('click', () => {
+    S.view = 'mine';
+    $('tabMine').classList.add('active');
+    $('tabAll')?.classList.remove('active');
+    loadRooms(true);
+  });
+
+  $('favFilter')?.addEventListener('click', () => {
+    S.favOnly = !S.favOnly;
+    $('favFilter').classList.toggle('active', S.favOnly);
+    render();
+  });
+
+  $('searchBtn')?.addEventListener('click', () => loadRooms(true));
+  $('moreBtn')?.addEventListener('click', () => {
+    S.page++;
+    loadRooms(false);
+  });
+
+  $('authBtn')?.addEventListener('click', async () => {
+    if (S.user) {
+      await sb.auth.signOut();
+      S.user = null;
+      updateAuthUI();
+      loadRooms(true);
+    } else {
+      const email = prompt('ईमेल टाका:');
+      if (email) {
+        const { error } = await sb.auth.signInWithOtp({ email });
+        if (error) alert('एरर: ' + error.message);
+        else alert('लॉगिन लिंक ईमेलवर पाठवली आहे.');
+      }
+    }
+  });
+}
+
+function loadRzp() {
+  return new Promise((ok, bad) => {
+    if (window.Razorpay) return ok();
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = ok;
+    s.onerror = () => bad(new Error('पेमेंट विंडो लोड झाली नाही'));
+    document.head.append(s);
+  });
+}
+
+async function pay(r, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('busy');
+  }
+  try {
+    await loadRzp();
+    const { data, error } = await sb.functions.invoke('create-order', { body: { room_id: r.id } });
+    if (error || !data || data.error) throw new Error((data && data.error) || 'पेमेंट सुरू करता आले नाही');
+
+    const rz = new Razorpay({
+      key: data.key_id,
+      order_id: data.order_id,
+      amount: data.amount,
+      currency: 'INR',
+      name: CONFIG.BRAND || 'Room Finder',
+      description: 'घरमालकाचा संपर्क आणि पत्ता (' + S.settings.unlock_minutes + ' मिनिटे)',
+      prefill: { email: S.user.email },
+      theme: { color: '#0e5a8a' },
+      handler: async () => {
+        await loadContactsFor([r]);
+        render();
+      },
+      modal: { ondismiss: () => alert('पेमेंट रद्द झाले') }
+    });
+    rz.on('payment.failed', () => alert('पेमेंट अयशस्वी झाले'));
+    rz.open();
+  } catch (err) {
+    alert(err.message || 'पेमेंट करताना त्रुटी आली');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('busy');
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
 const roomStatus = r =>
   ['available', 'rented', 'inactive'].includes(r.status)
     ? r.status
