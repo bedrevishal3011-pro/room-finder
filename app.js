@@ -506,48 +506,74 @@ function card(room, distance) {
   const isOwner = Boolean(S.user && room.owner_id === S.user.id);
   const canSeeContact = Boolean(contact && (isOwner || (S.user && (paymentOff || expiresAt))));
 
+  
   if (status === 'rented') {
     container.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
   } else if (status === 'inactive') {
     container.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
   } else if (canSeeContact) {
-    const box = el('div', 'unlock');
-    box.append(
-      el('strong', '', (contact.owner_name || 'रूम मालक') + (contact.phone ? ' • ' + contact.phone : '')),
-      el('div', '', contact.address || 'पत्ता उपलब्ध नाही')
-    );
-    if (!paymentOff && expiresAt && !isOwner) {
-      const countdown = el('div', 'mut');
-      countdown.dataset.exp = expiresAt;
-      box.append(countdown);
-    }
-    container.append(box);
+    const revealButton = addButton(
+      'संपर्क आणि पत्ता पहा',
+      'btn',
+      () => {
+        revealButton.remove();
 
-    if (contact.phone) {
-      const phoneDigits = String(contact.phone).replace(/\D/g, '');
-      addLink('WhatsApp', 'btn',
-        'https://wa.me/' + phoneDigits + '?text=' +
-        encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?'));
-      addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
-    }
-    if (room.featured && location) {
-      addLink('Maps वर पहा', 'btn ghost',
-        'https://www.google.com/maps?q=' + location.lat + ',' + location.lng);
-    }
+        const box = el('div', 'unlock');
+        box.append(
+          el('strong', '', (contact.owner_name || 'रूम मालक') + (contact.phone ? ' • ' + contact.phone : '')),
+          el('div', '', contact.address || 'पत्ता उपलब्ध नाही')
+        );
+
+        if (!paymentOff && expiresAt && !isOwner) {
+          const countdown = el('div', 'mut');
+          countdown.dataset.exp = expiresAt;
+          box.append(countdown);
+        }
+
+        container.insertBefore(box, actions);
+
+        if (contact.phone) {
+          const phoneDigits = String(contact.phone).replace(/\D/g, '');
+
+          addLink(
+            'WhatsApp',
+            'btn',
+            'https://wa.me/' + phoneDigits + '?text=' +
+            encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?')
+          );
+
+          addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
+        }
+
+        if (room.featured && location) {
+          addLink(
+            'Maps वर पहा',
+            'btn ghost',
+            'https://www.google.com/maps?q=' + location.lat + ',' + location.lng
+          );
+        }
+      }
+    );
   } else if (!isOwner) {
-    if (!paymentOff) actions.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
+    if (!paymentOff) {
+      actions.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
+    }
+
     const fee = (Number(S.settings.view_fee_paise) || 0) / 100;
     const minutes = Number(S.settings.unlock_minutes) || 30;
+
     const paymentButton = addButton(
       S.user
         ? (paymentOff ? 'संपर्क आणि पत्ता पहा' : 'संपर्क आणि पत्ता पहा – ₹' + fee + ' (' + minutes + ' मिनिटे)')
         : 'संपर्क आणि पत्ता पाहण्यासाठी login करा',
       'btn',
       () => {
-        if (!S.user) $('authBtn')?.click();
-        else if (!paymentOff) pay(room, paymentButton);
-        else {
-          setStatus('संपर्क माहिती उपलब्ध करण्यासाठी डेटाबेसची contact-access policy तपासा.');
+        if (!S.user) {
+          $('authBtn')?.click();
+        } else if (!paymentOff) {
+          pay(room, paymentButton);
+        } else {
+          setStatus('संपर्क माहिती लोड होत आहे...');
           loadContactsFor([room]).then(render);
         }
       }
