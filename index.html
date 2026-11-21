@@ -513,28 +513,6 @@ footer p{margin:0 0 8px}
   html{scroll-behavior:auto}
 }
 
-  /* Language selector */
-.language-select{
-  width:auto;
-  min-width:105px;
-  padding:7px 28px 7px 10px;
-  border:1px solid #cbb4e9;
-  border-radius:8px;
-  background:#eee3ff;
-  color:#573184;
-  font:700 .9rem "Mukta",sans-serif;
-  cursor:pointer;
-}
-
-@media(max-width:640px){
-  .acct{gap:5px}
-  .language-select{
-    min-width:88px;
-    max-width:100px;
-    padding:7px 5px;
-    font-size:.82rem;
-  }
-}
 </style>
 </head>
 
@@ -558,11 +536,6 @@ footer p{margin:0 0 8px}
     </nav>
 
    <div class="acct">
-  <select id="languageSelect" class="language-select" aria-label="Select language">
-    <option value="mr">मराठी</option>
-    <option value="hi">हिंदी</option>
-    <option value="en">English</option>
-  </select>
 
   <a id="adminLink" class="btn ghost sm hide" href="admin.html">Admin</a>
   <button type="button" id="authBtn" class="ghost sm">Google ने login</button>
@@ -955,7 +928,6 @@ footer p{margin:0 0 8px}
 </script>
 <script src="config.js"></script>
 <script src="app.js"></script>
-<script src="language.js"></script>
 
 </body>
 </html>
