@@ -297,7 +297,8 @@ async function loadRooms(reset = true, quiet = false) {
   const college = clean($('college')?.value);
   const type = $('type')?.value || '';
   const gender = $('gender')?.value || '';
-  const maxRent = Number($('max')?.value) || 0;
+  const maxRent = Number($('max')?.value) || 0; 
+
   const amenities = getAmenityValues('s_am');
   const sort = $('sort')?.value || 'new';
   const near = sort === 'near' && Boolean(S.me);
@@ -359,7 +360,8 @@ async function loadRooms(reset = true, quiet = false) {
   await loadContactsFor(rows);
   if (requestId !== S.req) return;
   render();
-} 
+}
+
 async function load(quiet = false) {
   if (!quiet) showSkeleton();
   await loadMeta();
@@ -506,7 +508,6 @@ function card(room, distance) {
   const isOwner = Boolean(S.user && room.owner_id === S.user.id);
   const canSeeContact = Boolean(contact && (isOwner || (S.user && (paymentOff || expiresAt))));
 
-  
   if (status === 'rented') {
     container.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
   } else if (status === 'inactive') {
@@ -599,7 +600,7 @@ function card(room, distance) {
       else render();
     });
 
-    if (!isOwner) {
+       if (!isOwner) {
       addButton('तक्रार करा', 'ghost', async () => {
         const reason = prompt('काय चुकीचं आहे? (थोडक्यात लिहा)');
         if (!reason || reason.trim().length < 3) return;
@@ -698,6 +699,7 @@ function shrinkImage(file) {
     image.src = objectUrl;
   });
 }
+
 async function postRoom() {
   if (!S.user) {
     $('msg').textContent = 'आधी Google ने login करा.';
@@ -810,17 +812,58 @@ function loadRazorpay() {
 }
 
 async function pay(room, button) {
-  if (!S.user) return $('authBtn')?.click();
   button.disabled = true;
   button.classList.add('busy');
 
   try {
+    // Always read the current Supabase session immediately before creating an order.
+    // S.user can be stale after a tab has been idle or an auth refresh has failed.
+    let sessionResult = await sb.auth.getSession();
+    let session = sessionResult.data?.session || null;
+
+    if (sessionResult.error) {
+      console.warn('Get session before payment:', sessionResult.error);
+    }
+
+    // Try refreshing once when the browser no longer has a usable access token.
+    if (!session?.access_token) {
+      const refreshed = await sb.auth.refreshSession();
+      if (refreshed.error) throw new Error('Login session संपली आहे. पुन्हा Google ने login करा.');
+      session = refreshed.data?.session || null;
+    }
+
+    if (!session?.access_token || !session.user?.id) {
+      S.user = null;
+      await updateAuthUI();
+      throw new Error('पेमेंट करण्यापूर्वी Google ने पुन्हा login करा.');
+    }
+
+    // Keep the in-memory user synchronized with the actual persisted session.
+    S.user = session.user;
+    await updateAuthUI();
+
     await loadRazorpay();
+
+    // Explicitly pass the current access token. This prevents create-order
+    // from receiving a request without the user's Authorization bearer token.
     const { data, error } = await sb.functions.invoke('create-order', {
-      body: { room_id: room.id }
+      body: { room_id: room.id },
+      headers: {
+        Authorization: 'Bearer ' + session.access_token
+      }
     });
+
     if (error || !data || data.error) {
-      throw new Error(data?.error || error?.message || 'पेमेंट सुरू करता आले नाही');
+      console.error('create-order error:', error || data);
+      throw new Error(
+        data?.error ||
+        error?.message ||
+        'पेमेंट सुरू करता आले नाही. Login session तपासा.'
+      );
+    }
+
+    if (!data.key_id || !data.order_id || !data.amount) {
+      throw new Error('पेमेंट ऑर्डरची माहिती अपूर्ण आहे. कृपया Admin शी संपर्क करा.');
     }
 
     await new Promise((resolve, reject) => {
@@ -828,25 +871,38 @@ async function pay(room, button) {
         key: data.key_id,
         order_id: data.order_id,
         amount: data.amount,
-        currency: 'INR',
+        currency: data.currency || 'INR',
         name: CONFIG.BRAND || 'Room Finder',
         description: 'घरमालकाचा संपर्क आणि पत्ता (' +
           (Number(S.settings.unlock_minutes) || 30) + ' मिनिटे)',
-        prefill: { email: S.user.email || '' },
+        prefill: { email: session.user.email || '' },
         theme: { color: '#0e5a8a' },
         handler: resolve,
         modal: { ondismiss: () => reject(new Error('पेमेंट रद्द झाले')) }
       });
-      checkout.on('payment.failed', () => reject(new Error('पेमेंट अयशस्वी झाले')));
+
+      checkout.on('payment.failed', response => {
+        console.error('Razorpay payment failed:', response?.error);
+        reject(new Error('पेमेंट अयशस्वी झाले. पुन्हा प्रयत्न करा.'));
+      });
       checkout.open();
     });
 
     setStatus('पेमेंट मिळाले, माहिती उघडत आहे…');
-    // Webhook verifies payment and creates the unlock. Poll the database, not the browser callback.
+
+    // Webhook verifies the payment and creates the unlock record.
     for (let attempt = 0; attempt < 20; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      if (!S.user) throw new Error('Login session संपली आहे. पुन्हा login करा.');
+
+      const current = await sb.auth.getSession();
+      session = current.data?.session || null;
+      if (!session?.access_token) {
+        throw new Error('Login session संपली आहे. पुन्हा login करा.');
+      }
+
+           S.user = session.user;
       await refreshUserData();
+
       if (S.unlocks[room.id]) {
         await loadContactsFor([room]);
         render();
@@ -854,8 +910,10 @@ async function pay(room, button) {
         return;
       }
     }
+
     setStatus('पेमेंट झाले आहे, पण माहिती उघडायला उशीर होत आहे. थोड्या वेळाने refresh करा.');
   } catch (error) {
+    console.error('Payment flow error:', error);
     setStatus(error.message || 'पेमेंट करताना त्रुटी आली');
   } finally {
     button.disabled = false;
@@ -1013,18 +1071,18 @@ function bindEvents() {
   $('addBtn2')?.addEventListener('click', openForm);
 
   $('locBtn')?.addEventListener('click', async () => {
-  $('locMsg').textContent = 'लोकेशन घेत आहे…';
+    $('locMsg').textContent = 'लोकेशन घेत आहे…';
 
-  try {
-    S.loc = await getLocation();
-    $('locMsg').textContent =
-      'लोकेशन मिळाली: ' + S.loc.lat.toFixed(6) + ', ' + S.loc.lng.toFixed(6);
-  } catch (error) {
-    S.loc = null;
-    $('locMsg').textContent = error.message ||
-      'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
-  }
-});
+    try {
+      S.loc = await getLocation();
+      $('locMsg').textContent =
+        'लोकेशन मिळाली: ' + S.loc.lat.toFixed(6) + ', ' + S.loc.lng.toFixed(6);
+    } catch (error) {
+      S.loc = null;
+      $('locMsg').textContent = error.message ||
+        'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
+    }
+  });
 
   $('save')?.addEventListener('click', postRoom);
 
