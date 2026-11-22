@@ -1013,15 +1013,18 @@ function bindEvents() {
   $('addBtn2')?.addEventListener('click', openForm);
 
   $('locBtn')?.addEventListener('click', async () => {
-    $('locMsg').textContent = 'लोकेशन घेत आहे…';
-    try {
-      S.loc = await getLocation();
-      $('locMsg').textContent = 'लोकेशन मिळाली'; 
-    } catch (_) {
-      S.loc = null;
-      $('locMsg').textContent = 'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
-    }
-  });
+  $('locMsg').textContent = 'लोकेशन घेत आहे…';
+
+  try {
+    S.loc = await getLocation();
+    $('locMsg').textContent =
+      'लोकेशन मिळाली: ' + S.loc.lat.toFixed(6) + ', ' + S.loc.lng.toFixed(6);
+  } catch (error) {
+    S.loc = null;
+    $('locMsg').textContent = error.message ||
+      'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
+  }
+});
 
   $('save')?.addEventListener('click', postRoom);
 
