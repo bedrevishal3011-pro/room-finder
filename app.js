@@ -1016,7 +1016,7 @@ function bindEvents() {
     $('locMsg').textContent = 'लोकेशन घेत आहे…';
     try {
       S.loc = await getLocation();
-      $('locMsg').textContent = 'लोकेशन मिळाली';
+      $('locMsg').textContent = 'लोकेशन मिळाली'; 
     } catch (_) {
       S.loc = null;
       $('locMsg').textContent = 'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
