@@ -508,11 +508,15 @@ function card(room, distance) {
   const isOwner = Boolean(S.user && room.owner_id === S.user.id);
   const canSeeContact = Boolean(contact && (isOwner || (S.user && (paymentOff || expiresAt))));
 
+  
   if (status === 'rented') {
-    container.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
+    container.append(el('span', 'tag feat', 'भाड्याने गेलेली आहे'));
+
   } else if (status === 'inactive') {
     container.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
-   } else if (canSeeContact) {
+
+  } else if (canSeeContact) {
+    // Contact unlocked: show details directly.
     const box = el('div', 'unlock');
 
     box.append(
@@ -523,7 +527,7 @@ function card(room, distance) {
     if (contact.phone) {
       box.append(el('div', '', 'मोबाईल: ' + contact.phone));
 
-      const phoneDigits = String(contact.phone).replace(/\D/g, '');
+      const phoneDigits = normPhone(contact.phone);
 
       addLink('Call करा', 'btn', 'tel:+' + phoneDigits);
 
@@ -550,19 +554,38 @@ function card(room, distance) {
         'https://www.google.com/maps?q=' + location.lat + ',' + location.lng
       );
     }
-    if (!paymentOff) {
-      actions.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
-    }
 
+  } else if (!isOwner) {
+    // Contact locked: show login/payment button only here.
     const fee = (Number(S.settings.view_fee_paise) || 0) / 100;
     const minutes = Number(S.settings.unlock_minutes) || 30;
 
+    if (!paymentOff) {
+      actions.append(
+        el('span', 'mut', 'पेमेंट केल्यानंतर संपर्क आणि पूर्ण पत्ता दिसेल.')
+      );
+    }
+
     const paymentButton = addButton(
-      S.user
-        ? (paymentOff ? 'संपर्क आणि पत्ता पहा' : 'संपर्क आणि पत्ता पहा – ₹' + fee + ' (' + minutes + ' मिनिटे)')
-        : 'संपर्क आणि पत्ता पाहण्यासाठी login करा',
+      !S.user
+        ? 'संपर्क आणि पत्ता पाहण्यासाठी login करा'
+        : paymentOff
+          ? 'संपर्क आणि पत्ता पहा'
+          : 'संपर्क आणि पत्ता पहा – ₹' + fee + ' (' + minutes + ' मिनिटे)',
       'btn',
       () => {
+        if (!S.user) {
+          $('authBtn')?.click();
+        } else if (!paymentOff) {
+          pay(room, paymentButton);
+        } else {
+          setStatus('संपर्क माहिती लोड होत आहे...');
+          loadContactsFor([room]).then(render);
+        }
+      }
+    );
+  }
+
         if (!S.user) {
           $('authBtn')?.click();
         } else if (!paymentOff) {
