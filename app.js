@@ -13,7 +13,7 @@ const el = (tag, cls = '', text = '') => {
   return node;
 };
 
-const AM = ['Wi-Fi', '????', 'AC', '?????? ????', '????????', '??? ??? ????????'];
+const AM = ['Wi-Fi', 'जेवण', 'AC', 'वॉशिंग मशीन', 'पार्किंग', 'वीज बिल समाविष्ट'];
 const PAGE_SIZE = 24;
 
 const S = {
@@ -106,9 +106,9 @@ function showCounts() {
   const total = Number(S.counts.total) || 0;
   const rented = Number(S.counts.rented) || 0;
   [
-    ['???? ???', total],
-    ['???????? ????????', rented],
-    ['???????? ???', Math.max(0, total - rented)]
+    ['एकूण रूम', total],
+    ['भाड्याने गेलेल्या', rented],
+    ['रिकाम्या रूम', Math.max(0, total - rented)]
   ].forEach(([label, value]) => {
     const item = el('div');
     item.append(el('b', '', value), el('span', '', label));
@@ -201,7 +201,7 @@ function updateUserName() {
     const name = S.user.user_metadata?.full_name ||
       S.user.user_metadata?.name ||
       S.user.email?.split('@')[0] || 'User';
-    nameNode.textContent = '???????, ' + name;
+    nameNode.textContent = 'नमस्कार, ' + name;
     nameNode.style.display = 'inline-block';
   } else {
     nameNode.textContent = '';
@@ -211,7 +211,7 @@ function updateUserName() {
 
 async function updateAuthUI() {
   const authButton = $('authBtn');
-  if (authButton) authButton.textContent = S.user ? 'Logout' : 'Google ?? login';
+  if (authButton) authButton.textContent = S.user ? 'Logout' : 'Google ने login';
   updateUserName();
 
   $('v_mine')?.classList.toggle('hide', !S.user);
@@ -246,7 +246,7 @@ function showSkeleton(count = 3) {
   if (!list) return;
   list.textContent = '';
   $('moreBtn')?.classList.add('hide');
-  setStatus('??? ???? ???…');
+  setStatus('रूम शोधत आहे…');
 
   for (let index = 0; index < count; index++) {
     const card = el('div', 'card skel');
@@ -340,7 +340,7 @@ async function loadRooms(reset = true, quiet = false) {
   if (requestId !== S.req) return;
   if (error) {
     console.error('Rooms load error:', error);
-    setStatus('???? ??? ??? ????: ' + error.message);
+    setStatus('डेटा लोड होत नाही: ' + error.message);
     return;
   }
 
@@ -411,14 +411,14 @@ function render() {
 
   setStatus(
     rooms.length
-      ? rooms.length + ' ??? ????????' + (S.more ? ' – ???? ????' : '')
+      ? rooms.length + ' रूम दाखवल्या' + (S.more ? ' – आणखी आहेत' : '')
       : S.view === 'mine'
-        ? '?????? ???? ??? ??????? ????.'
+        ? 'तुम्ही अजून रूम टाकलेली नाही.'
         : S.favOnly
-          ? '??????? ????? ?????? ??? ????.'
+          ? 'कोणतीही आवडती उपलब्ध रूम नाही.'
           : S.counts.total === 0
-            ? '???? ???? ??? ???? – ????? ??? ?????? add ???!'
-            : '?? ???????? ???????? ??? ?????.'
+            ? 'अजून एकही रूम नाही – पहिली रूम तुम्ही add करा!'
+            : 'या शोधासाठी रिकाम्या रूम नाहीत.'
   );
 }
 
@@ -428,32 +428,32 @@ function card(room, distance) {
   const top = el('div', 'top');
   const details = el('div');
 
-  details.append(el('strong', '', [room.area, room.city].filter(Boolean).join(', ') || '???'));
+  details.append(el('strong', '', [room.area, room.city].filter(Boolean).join(', ') || 'रूम'));
   const tags = el('div');
   [room.room_type, room.gender].filter(Boolean)
     .forEach(value => tags.append(el('span', 'tag', value)));
   if (room.featured) tags.append(el('span', 'tag feat', 'Featured'));
-  if (room.hidden) tags.append(el('span', 'tag feat', '???????'));
+  if (room.hidden) tags.append(el('span', 'tag feat', 'लपवलेली'));
   if (room.featured_requested && !room.featured) {
-    tags.append(el('span', 'tag', 'Featured ??????'));
+    tags.append(el('span', 'tag', 'Featured विनंती'));
   }
   details.append(tags);
-  top.append(details, el('div', 'price', '?' + room.rent.toLocaleString('en-IN') + '/?????'));
+  top.append(details, el('div', 'price', '₹' + room.rent.toLocaleString('en-IN') + '/महिना'));
   container.append(top);
 
   const statusLabels = {
-    available: '?????? (??????)',
-    rented: '???????? ??????',
-    inactive: '?????????'
+    available: 'उपलब्ध (रिकामी)',
+    rented: 'भाड्याने गेलेली',
+    inactive: 'निष्क्रिय'
   };
   container.append(el('span', 'room-status-badge room-status-' + status, statusLabels[status]));
 
   if (room.deposit) {
-    container.append(el('div', 'mut', '???????: ?' + room.deposit.toLocaleString('en-IN')));
+    container.append(el('div', 'mut', 'डिपॉझिट: ₹' + room.deposit.toLocaleString('en-IN')));
   }
-  if (room.college) container.append(el('div', 'mut', room.college + ' ???'));
+  if (room.college) container.append(el('div', 'mut', room.college + ' जवळ'));
   if (room.featured && Number.isFinite(distance)) {
-    container.append(el('div', 'mut', '???????????? ?????? ' + distance.toFixed(1) + ' ????'));
+    container.append(el('div', 'mut', 'तुमच्यापासून सुमारे ' + distance.toFixed(1) + ' किमी'));
   }
 
   if (room.amenities.length) {
@@ -469,7 +469,7 @@ function card(room, distance) {
       const image = el('img');
       image.src = url;
       image.loading = 'lazy';
-      image.alt = '????? ???? ' + (index + 1) + ' (???? ?????? ????)';
+      image.alt = 'रूमचा फोटो ' + (index + 1) + ' (मोठा करायला दाबा)';
       image.tabIndex = 0;
       image.setAttribute('role', 'button');
       image.addEventListener('click', () => openLightbox(urls, index));
@@ -508,55 +508,49 @@ function card(room, distance) {
   const canSeeContact = Boolean(contact && (isOwner || (S.user && (paymentOff || expiresAt))));
 
   if (status === 'rented') {
-    container.append(el('span', 'tag feat', '???????? ???? ???'));
+    container.append(el('span', 'tag feat', 'भाड्याने गेली आहे'));
   } else if (status === 'inactive') {
-    container.append(el('span', 'mut', '?? ??? ????? ????????? ?????? ??? ????.'));
+    container.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
   } else if (canSeeContact) {
-    const revealButton = addButton(
-      '?????? ??? ????? ???',
-      'btn',
-      () => {
-        revealButton.remove();
-
-        const box = el('div', 'unlock');
-        box.append(
-          el('strong', '', (contact.owner_name || '??? ????') + (contact.phone ? ' • ' + contact.phone : '')),
-          el('div', '', contact.address || '????? ?????? ????')
-        );
-
-        if (!paymentOff && expiresAt && !isOwner) {
-          const countdown = el('div', 'mut');
-          countdown.dataset.exp = expiresAt;
-          box.append(countdown);
-        }
-
-        container.insertBefore(box, actions);
-
-        if (contact.phone) {
-          const phoneDigits = String(contact.phone).replace(/\D/g, '');
-
-          addLink(
-            'WhatsApp',
-            'btn',
-            'https://wa.me/' + phoneDigits + '?text=' +
-            encodeURIComponent('???????, Room Finder ???? ????? ??? ??????. ???? ?????? ??? ???')
-          );
-
-          addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
-        }
-
-        if (room.featured && location) {
-          addLink(
-            'Maps ?? ???',
-            'btn ghost',
-            'https://www.google.com/maps?q=' + location.lat + ',' + location.lng
-          );
-        }
-      }
+    // Payment zhalyavar address thet dakhva (button nahi)
+    const box = el('div', 'unlock');
+    box.append(
+      el('strong', '', (contact.owner_name || 'रूम मालक') + (contact.phone ? ' • ' + contact.phone : '')),
+      el('div', '', contact.address || 'पत्ता उपलब्ध नाही')
     );
+
+    if (!paymentOff && expiresAt && !isOwner) {
+      const countdown = el('div', 'mut');
+      countdown.dataset.exp = expiresAt;
+      box.append(countdown);
+    }
+
+    // actions ajun container madhe add zalela nahi, mhanun append vapra
+    container.append(box);
+
+    if (contact.phone) {
+      const phoneDigits = String(contact.phone).replace(/\D/g, '');
+
+      addLink(
+        'WhatsApp',
+        'btn',
+        'https://wa.me/' + phoneDigits + '?text=' +
+        encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?')
+      );
+
+      addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
+    }
+
+    if (room.featured && location) {
+      addLink(
+        'Maps वर पहा',
+        'btn ghost',
+        'https://www.google.com/maps?q=' + location.lat + ',' + location.lng
+      );
+    }
   } else if (!isOwner) {
     if (!paymentOff) {
-      actions.append(el('span', 'mut', '???? ???????? ????????? ??? ???? ?????.'));
+      actions.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
     }
 
     const fee = (Number(S.settings.view_fee_paise) || 0) / 100;
@@ -564,8 +558,8 @@ function card(room, distance) {
 
     const paymentButton = addButton(
       S.user
-        ? (paymentOff ? '?????? ??? ????? ???' : '?????? ??? ????? ??? – ?' + fee + ' (' + minutes + ' ??????)')
-        : '?????? ??? ????? ??????????? login ???',
+        ? (paymentOff ? 'संपर्क आणि पत्ता पहा' : 'संपर्क आणि पत्ता पहा – ₹' + fee + ' (' + minutes + ' मिनिटे)')
+        : 'संपर्क आणि पत्ता पाहण्यासाठी login करा',
       'btn',
       () => {
         if (!S.user) {
@@ -573,7 +567,7 @@ function card(room, distance) {
         } else if (!paymentOff) {
           pay(room, paymentButton);
         } else {
-          setStatus('?????? ?????? ??? ??? ???...');
+          setStatus('संपर्क माहिती लोड होत आहे...');
           loadContactsFor([room]).then(render);
         }
       }
@@ -585,49 +579,49 @@ function card(room, distance) {
       if (S.favorites.has(room.id)) {
         const { error } = await sb.from('favorites').delete()
           .eq('room_id', room.id).eq('user_id', S.user.id);
-        if (error) return alert('Saved ????? ??? ????: ' + error.message);
+        if (error) return alert('Saved काढता आले नाही: ' + error.message);
         S.favorites.delete(room.id);
       } else {
         const { error } = await sb.from('favorites').insert({
           room_id: room.id,
           user_id: S.user.id
         });
-        if (error) return alert('Save ???? ??? ????: ' + error.message);
+        if (error) return alert('Save करता आले नाही: ' + error.message);
         S.favorites.add(room.id);
       }
       if (S.favOnly) await loadRooms(true);
       else render();
     });
         if (!isOwner) {
-      addButton('?????? ???', 'ghost', async () => {
-        const reason = prompt('??? ?????? ???? (???????? ????)');
+      addButton('तक्रार करा', 'ghost', async () => {
+        const reason = prompt('काय चुकीचं आहे? (थोडक्यात लिहा)');
         if (!reason || reason.trim().length < 3) return;
         const { error } = await sb.from('reports').insert({
           room_id: room.id,
           reason: reason.trim().slice(0, 300),
           user_id: S.user.id
         });
-        alert(error ? '?????? ?????? ??? ????: ' + error.message : '?????? ???????, ???????');
+        alert(error ? 'तक्रार पाठवता आली नाही: ' + error.message : 'तक्रार नोंदवली, धन्यवाद');
       });
     }
   }
 
   if (isOwner) {
     const rented = status === 'rented';
-    addButton(rented ? '?????? ??????' : '???????? ????', 'ghost', async () => {
+    addButton(rented ? 'पुन्हा उपलब्ध' : 'भाड्याने गेली', 'ghost', async () => {
       const { error } = await sb.from('rooms')
         .update({ rented: !rented, status: rented ? 'available' : 'rented' })
         .eq('id', room.id).eq('owner_id', S.user.id);
-      if (error) alert('?????? ????? ??? ????: ' + error.message);
+      if (error) alert('स्टेटस बदलता आला नाही: ' + error.message);
       else await load();
     });
 
     if (!room.featured && !room.featured_requested) {
-      addButton('Featured ???? ??????', 'ghost', async () => {
+      addButton('Featured साठी विनंती', 'ghost', async () => {
         const { error } = await sb.from('rooms')
           .update({ featured_requested: true })
           .eq('id', room.id).eq('owner_id', S.user.id);
-        if (error) alert('?????? ?????? ??? ????: ' + error.message);
+        if (error) alert('विनंती पाठवता आली नाही: ' + error.message);
         else await load();
       });
     }
@@ -637,17 +631,17 @@ function card(room, distance) {
       // Two-step confirmation avoids accidental deletion.
       if (!deleteConfirm) {
         deleteConfirm = true;
-        event.currentTarget.textContent = '??????? ?????? ????';
+        event.currentTarget.textContent = 'खात्री? पुन्हा दाबा';
         return;
       }
-      if (!confirm('?? ??? ?????? delete ?????? ??? ???')) return;
+      if (!confirm('ही रूम कायमची delete करायची आहे का?')) return;
       if (room.photos.length) {
         const storageResult = await sb.storage.from('room-photos').remove(room.photos);
         if (storageResult.error) console.warn('Photo cleanup:', storageResult.error);
       }
       const { error } = await sb.from('rooms').delete()
         .eq('id', room.id).eq('owner_id', S.user.id);
-      if (error) alert('??? delete ???? ????: ' + error.message);
+      if (error) alert('रूम delete झाली नाही: ' + error.message);
       else await load();
     });
   }
@@ -658,7 +652,7 @@ function card(room, distance) {
 
 function getLocation() {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error('?????? ?????? ????'));
+    if (!navigator.geolocation) return reject(new Error('लोकेशन उपलब्ध नाही'));
     navigator.geolocation.getCurrentPosition(
       position => resolve({
         lat: position.coords.latitude,
@@ -682,17 +676,17 @@ function shrinkImage(file) {
       const context = canvas.getContext('2d');
       if (!context) {
         URL.revokeObjectURL(objectUrl);
-        return reject(new Error('???? ????????? ???? ??? ????'));
+        return reject(new Error('फोटो प्रक्रिया करता आली नाही'));
       }
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(objectUrl);
       canvas.toBlob(blob => blob
         ? resolve(blob)
-        : reject(new Error('???? ????????? ???????')), 'image/jpeg', 0.8);
+        : reject(new Error('फोटो प्रक्रिया अयशस्वी')), 'image/jpeg', 0.8);
     };
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error('?? ???? ????? ??? ????'));
+      reject(new Error('हा फोटो वाचता आला नाही'));
     };
     image.src = objectUrl;
   });
@@ -700,7 +694,7 @@ function shrinkImage(file) {
 
 async function postRoom() {
   if (!S.user) {
-    $('msg').textContent = '??? Google ?? login ???.';
+    $('msg').textContent = 'आधी Google ने login करा.';
     return;
   }
 
@@ -710,28 +704,28 @@ async function postRoom() {
 
   if (value('f_city').length < 2 || value('f_area').length < 2 ||
       rent <= 0 || value('f_name').length < 2 || value('f_address').length < 5) {
-    $('msg').textContent = '???, ?????, ????, ??? ??? ????? ????? ?????? ???.';
+    $('msg').textContent = 'शहर, एरिया, भाडे, नाव आणि पूर्ण पत्ता आवश्यक आहे.';
     return;
   }
   if (!$('f_terms').checked) {
-    $('msg').textContent = '??? ????? ?????????? ????? ??? ???.';
+    $('msg').textContent = 'अटी मान्य करण्यासाठी बॉक्स टिक करा.';
     return;
   }
   if (!/^91[6-9]\d{9}$/.test(phone)) {
-    $('msg').textContent = '????? 10 ???? ?????? ???? ????.';
+    $('msg').textContent = 'योग्य 10 अंकी मोबाईल नंबर टाका.';
     return;
   }
 
   const button = $('save');
   button.disabled = true;
   button.classList.add('busy');
-  $('msg').textContent = '??? ???????? ??? ???…';
+  $('msg').textContent = 'रूम प्रसिद्ध होत आहे…';
   const uploaded = [];
 
   try {
     const files = [...($('f_photos').files || [])].slice(0, 3);
     for (const file of files) {
-      if (!file.type.startsWith('image/')) throw new Error('???? image ???? ?????.');
+      if (!file.type.startsWith('image/')) throw new Error('फक्त image फोटो निवडा.');
       const path = S.user.id + '/' + crypto.randomUUID() + '.jpg';
       const { error } = await sb.storage.from('room-photos')
         .upload(path, await shrinkImage(file), { contentType: 'image/jpeg' });
@@ -777,7 +771,7 @@ async function postRoom() {
       if (locationError) console.warn('Location save failed:', locationError);
     }
 
-    $('msg').textContent = '??? ???????? ????.';
+    $('msg').textContent = 'रूम प्रसिद्ध झाली.';
     ['f_city', 'f_area', 'f_college', 'f_rent', 'f_dep', 'f_desc',
       'f_name', 'f_phone', 'f_address', 'f_photos'].forEach(id => {
       if ($(id)) $(id).value = '';
@@ -791,7 +785,7 @@ async function postRoom() {
     if (uploaded.length) {
       await sb.storage.from('room-photos').remove(uploaded);
     }
-    $('msg').textContent = 'Post ???? ??? ????: ' + (error.message || error);
+    $('msg').textContent = 'Post करता आली नाही: ' + (error.message || error);
   } finally {
     button.disabled = false;
     button.classList.remove('busy');
@@ -804,7 +798,7 @@ function loadRazorpay() {
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.onload = resolve;
-    script.onerror = () => reject(new Error('?????? ????? ??? ???? ????'));
+    script.onerror = () => reject(new Error('पेमेंट विंडो लोड झाली नाही'));
     document.head.append(script);
   });
 }
@@ -826,14 +820,14 @@ async function pay(room, button) {
     // Try refreshing once when the browser no longer has a usable access token.
     if (!session?.access_token) {
       const refreshed = await sb.auth.refreshSession();
-      if (refreshed.error) throw new Error('Login session ????? ???. ?????? Google ?? login ???.');
+      if (refreshed.error) throw new Error('Login session संपली आहे. पुन्हा Google ने login करा.');
       session = refreshed.data?.session || null;
     }
 
     if (!session?.access_token || !session.user?.id) {
       S.user = null;
       await updateAuthUI();
-      throw new Error('?????? ???????????? Google ?? ?????? login ???.');
+      throw new Error('पेमेंट करण्यापूर्वी Google ने पुन्हा login करा.');
     }
 
     // Keep the in-memory user synchronized with the actual persisted session.
@@ -856,12 +850,12 @@ async function pay(room, button) {
       throw new Error(
         data?.error ||
         error?.message ||
-        '?????? ???? ???? ??? ????. Login session ?????.'
+        'पेमेंट सुरू करता आले नाही. Login session तपासा.'
       );
     }
 
     if (!data.key_id || !data.order_id || !data.amount) {
-      throw new Error('?????? ??????? ?????? ?????? ???. ????? Admin ?? ?????? ???.');
+      throw new Error('पेमेंट ऑर्डरची माहिती अपूर्ण आहे. कृपया Admin शी संपर्क करा.');
     }
 
     await new Promise((resolve, reject) => {
@@ -871,22 +865,22 @@ async function pay(room, button) {
         amount: data.amount,
         currency: data.currency || 'INR',
         name: CONFIG.BRAND || 'Room Finder',
-        description: '????????? ?????? ??? ????? (' +
-          (Number(S.settings.unlock_minutes) || 30) + ' ??????)',
+        description: 'घरमालकाचा संपर्क आणि पत्ता (' +
+          (Number(S.settings.unlock_minutes) || 30) + ' मिनिटे)',
         prefill: { email: session.user.email || '' },
         theme: { color: '#0e5a8a' },
         handler: resolve,
-        modal: { ondismiss: () => reject(new Error('?????? ???? ????')) }
+        modal: { ondismiss: () => reject(new Error('पेमेंट रद्द झाले')) }
       });
 
       checkout.on('payment.failed', response => {
         console.error('Razorpay payment failed:', response?.error);
-        reject(new Error('?????? ??????? ????. ?????? ??????? ???.'));
+        reject(new Error('पेमेंट अयशस्वी झाले. पुन्हा प्रयत्न करा.'));
       });
       checkout.open();
     });
 
-    setStatus('?????? ??????, ?????? ???? ???…');
+    setStatus('पेमेंट मिळाले, माहिती उघडत आहे…');
 
     // Webhook verifies the payment and creates the unlock record.
     for (let attempt = 0; attempt < 20; attempt++) {
@@ -895,7 +889,7 @@ async function pay(room, button) {
       const current = await sb.auth.getSession();
       session = current.data?.session || null;
       if (!session?.access_token) {
-        throw new Error('Login session ????? ???. ?????? login ???.');
+        throw new Error('Login session संपली आहे. पुन्हा login करा.');
       }
             S.user = session.user;
       await refreshUserData();
@@ -903,15 +897,15 @@ async function pay(room, button) {
       if (S.unlocks[room.id]) {
         await loadContactsFor([room]);
         render();
-        setStatus('?????? ?????? ????? ???.');
+        setStatus('संपर्क माहिती उघडली आहे.');
         return;
       }
     }
 
-    setStatus('?????? ???? ???, ?? ?????? ??????? ???? ??? ???. ?????? ?????? refresh ???.');
+    setStatus('पेमेंट झाले आहे, पण माहिती उघडायला उशीर होत आहे. थोड्या वेळाने refresh करा.');
   } catch (error) {
     console.error('Payment flow error:', error);
-    setStatus(error.message || '?????? ?????? ?????? ???');
+    setStatus(error.message || 'पेमेंट करताना त्रुटी आली');
   } finally {
     button.disabled = false;
     button.classList.remove('busy');
@@ -928,16 +922,16 @@ function openLightbox(urls, startIndex) {
   const stage = el('div', 'lb-stage');
   const image = el('img');
   const caption = el('div', 'lb-cap');
-  const closeButton = el('button', 'lb-x', '?');
+  const closeButton = el('button', 'lb-x', '✕');
   const previousButton = el('button', 'lb-nav lb-p', '‹');
   const nextButton = el('button', 'lb-nav lb-n', '›');
 
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', '???? ???');
-  closeButton.setAttribute('aria-label', '??? ???');
-  previousButton.setAttribute('aria-label', '????? ????');
-  nextButton.setAttribute('aria-label', '????? ????');
+  overlay.setAttribute('aria-label', 'फोटो पहा');
+  closeButton.setAttribute('aria-label', 'बंद करा');
+  previousButton.setAttribute('aria-label', 'मागील फोटो');
+  nextButton.setAttribute('aria-label', 'पुढील फोटो');
 
   const show = nextIndex => {
     index = (nextIndex + urls.length) % urls.length;
@@ -945,7 +939,7 @@ function openLightbox(urls, startIndex) {
     zoomed = false;
     stage.classList.remove('zoom');
     caption.textContent = (index + 1) + ' / ' + urls.length +
-      ' • ???? ?????? ?????? ????';
+      ' • मोठं करायला फोटोवर दाबा';
   };
   const close = () => {
     document.removeEventListener('keydown', onKey);
@@ -1000,10 +994,10 @@ function startCountdown() {
         hasExpired = true;
         return;
       }
-      node.textContent = '???? ??? ' +
+      node.textContent = 'बाकी वेळ ' +
         String(Math.floor(seconds / 60)).padStart(2, '0') + ':' +
         String(seconds % 60).padStart(2, '0') +
-        ' – ???? ?? ?????? ????';
+        ' – नंतर ही माहिती लपेल';
     });
     if (hasExpired && Date.now() - S.last > 5000) {
       S.last = Date.now();
@@ -1023,7 +1017,7 @@ function bindEvents() {
       try {
         S.me = await getLocation();
       } catch (_) {
-        setStatus('?????? ?????? ???? – ????? location ???? ??? / ??????? ????.');
+        setStatus('लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.');
         return;
       }
     }
@@ -1050,7 +1044,7 @@ function bindEvents() {
 
   $('favBtn')?.addEventListener('click', () => {
     S.favOnly = !S.favOnly;
-    $('favBtn').textContent = S.favOnly ? 'Saved (????)' : 'Saved';
+    $('favBtn').textContent = S.favOnly ? 'Saved (चालू)' : 'Saved';
     loadRooms(true);
   });
 
@@ -1068,16 +1062,16 @@ function bindEvents() {
   $('addBtn2')?.addEventListener('click', openForm);
 
   $('locBtn')?.addEventListener('click', async () => {
-    $('locMsg').textContent = '?????? ??? ???…';
+    $('locMsg').textContent = 'लोकेशन घेत आहे…';
 
     try {
       S.loc = await getLocation();
       $('locMsg').textContent =
-        '?????? ??????: ' + S.loc.lat.toFixed(6) + ', ' + S.loc.lng.toFixed(6);
+        'लोकेशन मिळाली: ' + S.loc.lat.toFixed(6) + ', ' + S.loc.lng.toFixed(6);
     } catch (error) {
       S.loc = null;
       $('locMsg').textContent = error.message ||
-        '?????? ?????? ???? – ????? location ???? ??? / ??????? ????.';
+        'लोकेशन मिळाली नाही – फोनची location चालू करा / परवानगी द्या.';
     }
   });
 
@@ -1086,14 +1080,14 @@ function bindEvents() {
   $('authBtn')?.addEventListener('click', async () => {
     if (S.user) {
       const { error } = await sb.auth.signOut();
-      if (error) alert('Logout ???? ??? ????: ' + error.message);
+      if (error) alert('Logout करता आले नाही: ' + error.message);
       return;
     }
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: location.origin + location.pathname }
     });
-    if (error) alert('Google login ???? ???? ????: ' + error.message);
+    if (error) alert('Google login सुरू झाले नाही: ' + error.message);
   });
 }
 
