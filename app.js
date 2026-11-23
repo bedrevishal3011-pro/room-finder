@@ -1077,19 +1077,43 @@ function bindEvents() {
 
   $('save')?.addEventListener('click', postRoom);
 
+ 
   $('authBtn')?.addEventListener('click', async () => {
-    if (S.user) {
-      const { error } = await sb.auth.signOut();
-      if (error) alert('Logout करता आले नाही: ' + error.message);
-      return;
+    const button = $('authBtn');
+    button.disabled = true;
+
+    try {
+      // Actual Supabase session तपासा
+      const { data, error } = await sb.auth.getSession();
+
+      if (error) throw error;
+
+      if (data?.session) {
+        // Session अस्तित्वात असल्यास logout
+        const { error: logoutError } = await sb.auth.signOut();
+
+        if (logoutError) throw logoutError;
+      } else {
+        // Session आधीच संपलेले असल्यास local UI reset
+        S.user = null;
+        S.admin = false;
+        S.contacts = {};
+        S.unlocks = {};
+        S.favorites = new Set();
+        S.view = 'all';
+        S.favOnly = false;
+
+        await updateAuthUI();
+        await load();
+      }
+
+    } catch (error) {
+      console.error('Logout error:', error);
+      alert('Logout करता आले नाही: ' + error.message);
+    } finally {
+      button.disabled = false;
     }
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: location.origin + location.pathname }
-    });
-    if (error) alert('Google login सुरू झाले नाही: ' + error.message);
   });
-}
 
 async function init() {
   loadFavs();
