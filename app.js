@@ -512,48 +512,42 @@ function card(room, distance) {
   } else if (status === 'inactive') {
     container.append(el('span', 'mut', 'ही रूम सध्या जाहिरातीत दाखवली जात नाही.'));
   } else if (canSeeContact) {
-    const revealButton = addButton(
-      'संपर्क आणि पत्ता पहा',
-      'btn',
-      () => {
-        revealButton.remove();
-
-        const box = el('div', 'unlock');
-        box.append(
-          el('strong', '', (contact.owner_name || 'रूम मालक') + (contact.phone ? ' • ' + contact.phone : '')),
-          el('div', '', contact.address || 'पत्ता उपलब्ध नाही')
-        );
-
-        if (!paymentOff && expiresAt && !isOwner) {
-          const countdown = el('div', 'mut');
-          countdown.dataset.exp = expiresAt;
-          box.append(countdown);
-        }
-
-        container.insertBefore(box, actions);
-
-        if (contact.phone) {
-          const phoneDigits = String(contact.phone).replace(/\D/g, '');
-
-          addLink(
-            'WhatsApp',
-            'btn',
-            'https://wa.me/' + phoneDigits + '?text=' +
-            encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?')
-          );
-
-          addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
-        }
-
-        if (room.featured && location) {
-          addLink(
-            'Maps वर पहा',
-            'btn ghost',
-            'https://www.google.com/maps?q=' + location.lat + ',' + location.lng
-          );
-        }
-      }
+    // Payment zhalyavar address thet dakhva (button nahi)
+    const box = el('div', 'unlock');
+    box.append(
+      el('strong', '', (contact.owner_name || 'रूम मालक') + (contact.phone ? ' • ' + contact.phone : '')),
+      el('div', '', contact.address || 'पत्ता उपलब्ध नाही')
     );
+
+    if (!paymentOff && expiresAt && !isOwner) {
+      const countdown = el('div', 'mut');
+      countdown.dataset.exp = expiresAt;
+      box.append(countdown);
+    }
+
+    // actions ajun container madhe add zalela nahi, mhanun append vapra
+    container.append(box);
+
+    if (contact.phone) {
+      const phoneDigits = String(contact.phone).replace(/\D/g, '');
+
+      addLink(
+        'WhatsApp',
+        'btn',
+        'https://wa.me/' + phoneDigits + '?text=' +
+        encodeURIComponent('नमस्कार, Room Finder वरील तुमची रूम पाहिली. अजून उपलब्ध आहे का?')
+      );
+
+      addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
+    }
+
+    if (room.featured && location) {
+      addLink(
+        'Maps वर पहा',
+        'btn ghost',
+        'https://www.google.com/maps?q=' + location.lat + ',' + location.lng
+      );
+    }
   } else if (!isOwner) {
     if (!paymentOff) {
       actions.append(el('span', 'mut', 'पैसे भरल्यावर वापराच्या अटी लागू होतात.'));
