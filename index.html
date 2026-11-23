@@ -1,17 +1,18 @@
-
 <!DOCTYPE html>
 <html lang="mr">
 <head>
-<meta name="google-site-verification" content="G66kBNxSApDymzEXz1Kf6m939-Z1LeVH8LS9myaYWco" />
 <meta charset="utf-8">
-<title>Room Finder Maharashtra</title>
+<meta name="google-site-verification" content="G66kBNxSApDymzEXz1Kf6m939-Z1LeVH8LS9myaYWco" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- FIX 1: आधी दोन <title> होते, आता फक्त एक (SEO वाला) -->
 <title>रूम भाड्याने | कॉलेजजवळ रूम, PG आणि Hostel – Room Finder Maharashtra</title>
 <meta name="description" content="महाराष्ट्रात कॉलेजजवळ रूम, PG आणि हॉस्टेल शोधा. फोटो पहा, भाडे व सुविधा फिल्टर करा आणि घरमालकाशी थेट संपर्क साधा. दलाल नाही, कमिशन नाही.">
 <meta name="keywords" content="रूम भाड्याने, room for rent maharashtra, PG near college, student rooms, hostel near college, room finder">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0e5a8a">
 <link rel="canonical" href="https://room-finder-nkuy.vercel.app/">
+
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:locale" content="mr_IN">
@@ -19,10 +20,14 @@
 <meta property="og:description" content="दलाल नाही, कमिशन नाही. कॉलेजजवळ रूम शोधा, फोटो पहा आणि थेट घरमालकाशी संपर्क साधा.">
 <meta property="og:url" content="https://room-finder-nkuy.vercel.app/">
 <meta property="og:site_name" content="Room Finder Maharashtra">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700&family=Noto+Serif+Devanagari:wght@600;700&display=swap" rel="stylesheet">
-<script src="/seo.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Serif+Devanagari:wght@600;700&display=swap" rel="stylesheet">
+
+<!-- FIX 2: defer जोडलं, म्हणजे हा script पेज दिसणं थांबवत नाही -->
+<script src="/seo.js" defer></script>
+
 <style>
 :root{
   color-scheme:light;
@@ -87,7 +92,7 @@ section[id]{scroll-margin-top:76px}
 .nav a{
   color:#393443;text-decoration:none;padding:6px 11px;
   border-radius:8px;font-weight:600;font-size:.95rem;
-  transform:rotate(-1deg)
+  transform:rotate(-1deg);white-space:nowrap
 }
 .nav a:nth-child(even){transform:rotate(1deg)}
 .nav a:hover{background:var(--pri-l);color:var(--pri)}
@@ -272,7 +277,8 @@ summary{cursor:pointer;color:var(--pri);font-weight:600}
 .fs legend{font-weight:700;padding:0;margin:18px 0 0;color:var(--ink)}
 .listing{
   display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s;
-  animation:up .4s both;overflow:hidden;
+  /* FIX 3: "both" ऐवजी "backwards" — म्हणजे animation संपल्यावर hover चं translateY काम करतं */
+  animation:up .4s backwards;overflow:hidden;
   border:1px solid #e4d5bc;border-radius:5px 10px 6px 9px;
   background:#fffaf0;
   background-image:repeating-linear-gradient(1deg,rgba(120,91,53,.018) 0 1px,transparent 1px 5px),linear-gradient(145deg,rgba(255,255,255,.65),rgba(255,255,255,0));
@@ -473,8 +479,19 @@ footer p{margin:0 0 8px}
 /* Responsive */
 @media(max-width:820px){
   .hero-grid{grid-template-columns:1fr}
-  .art,.nav{display:none}
+  .art{display:none}
   .hero{padding-top:35px}
+
+  /* FIX 4: मोबाईलवर menu लपवण्याऐवजी header खाली स्क्रोल होणारी ओळ म्हणून दाखवतो */
+  .bar{flex-wrap:wrap;row-gap:0}
+  .nav{
+    order:3;width:100%;margin:0 0 8px;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:2px
+  }
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{flex:0 0 auto;transform:none!important;background:#f3e8d5}
+  section[id]{scroll-margin-top:120px}
 }
 @media(max-width:640px){
   #userName{display:none!important}
@@ -505,14 +522,10 @@ footer p{margin:0 0 8px}
   .form-topbar{align-items:center}
   .form-close{padding:8px 11px;font-size:13px}
 }
-@media(max-width:560px){
-  .form-topbar{align-items:center}
-}
 @media(prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
   html{scroll-behavior:auto}
 }
-
 </style>
 </head>
 
@@ -535,11 +548,12 @@ footer p{margin:0 0 8px}
       <a href="#faq">प्रश्न</a>
     </nav>
 
-   <div class="acct">
-
-  <a id="adminLink" class="btn ghost sm hide" href="admin.html">Admin</a>
-  <button type="button" id="authBtn" class="ghost sm">Google ने login</button>
-</div>
+    <div class="acct">
+      <!-- FIX 5: CSS मध्ये #userName होतं पण HTML मध्ये नव्हतं. app.js ला हवं असेल तर आता सापडेल -->
+      <span id="userName" class="mut hide"></span>
+      <a id="adminLink" class="btn ghost sm hide" href="admin.html">Admin</a>
+      <button type="button" id="authBtn" class="ghost sm">Google ने login</button>
+    </div>
   </div>
 </header>
 
@@ -555,7 +569,7 @@ footer p{margin:0 0 8px}
         <div class="row">
           <input id="q" aria-label="शहर किंवा एरिया" placeholder="शहर किंवा एरिया (उदा. पुणे, कोथरूड)">
           <input id="college" aria-label="कॉलेज" placeholder="कॉलेज (उदा. COEP)">
-          <input id="max" type="number" min="0" aria-label="कमाल भाडे" placeholder="कमाल भाडे (₹)">
+          <input id="max" type="number" min="0" inputmode="numeric" aria-label="कमाल भाडे" placeholder="कमाल भाडे (₹)">
         </div>
 
         <details>
@@ -629,11 +643,7 @@ footer p{margin:0 0 8px}
         <button type="button" id="v_all" class="on">सर्व रूम</button>
         <button type="button" id="v_mine" class="ghost hide">माझ्या रूम</button>
         <button type="button" id="favBtn" class="ghost hide">Saved</button>
-
-        <!-- मुख्य रूम लिस्टिंग बटण -->
-        <button type="button" id="addBtn" class="vip-listing-btn">
-          रूम भाड्याने द्या
-        </button>
+        <button type="button" id="addBtn" class="vip-listing-btn">रूम भाड्याने द्या</button>
       </div>
     </div>
 
@@ -645,11 +655,7 @@ footer p{margin:0 0 8px}
           <p class="mut" style="margin:2px 0 0">* असलेली माहिती आवश्यक आहे.</p>
         </div>
 
-        <button
-          type="button"
-          id="closeFormBtn"
-          class="ghost sm form-close"
-          aria-label="फॉर्म बंद करा">
+        <button type="button" id="closeFormBtn" class="ghost sm form-close" aria-label="फॉर्म बंद करा">
           ✕ बंद करा
         </button>
       </div>
@@ -659,7 +665,7 @@ footer p{margin:0 0 8px}
         <div class="row">
           <div>
             <label for="f_city">शहर *</label>
-            <input id="f_city">
+            <input id="f_city" autocomplete="address-level2">
           </div>
           <div>
             <label for="f_area">एरिया *</label>
@@ -677,11 +683,11 @@ footer p{margin:0 0 8px}
         <div class="row">
           <div>
             <label for="f_rent">भाडे (₹/महिना) *</label>
-            <input id="f_rent" type="number" min="0">
+            <input id="f_rent" type="number" min="0" inputmode="numeric">
           </div>
           <div>
             <label for="f_dep">डिपॉझिट (₹)</label>
-            <input id="f_dep" type="number" min="0">
+            <input id="f_dep" type="number" min="0" inputmode="numeric">
           </div>
         </div>
 
@@ -723,16 +729,18 @@ footer p{margin:0 0 8px}
         <legend>संपर्क (फक्त पैसे भरलेल्यांना दिसेल)</legend>
 
         <label for="f_address">पूर्ण पत्ता *</label>
-        <input id="f_address" maxlength="300">
+        <input id="f_address" maxlength="300" autocomplete="street-address">
 
         <div class="row">
           <div>
             <label for="f_name">तुमचे नाव *</label>
-            <input id="f_name">
+            <input id="f_name" autocomplete="name">
           </div>
           <div>
             <label for="f_phone">WhatsApp / फोन नंबर *</label>
-            <input id="f_phone" inputmode="numeric" placeholder="10 अंकी">
+            <!-- FIX 6: type=tel + maxlength=10 + pattern → मोबाईलवर नंबर कीपॅड येतो आणि 10 अंकच घेतो -->
+            <input id="f_phone" type="tel" inputmode="numeric" maxlength="10"
+                   pattern="[0-9]{10}" autocomplete="tel-national" placeholder="10 अंकी">
           </div>
         </div>
 
@@ -770,6 +778,9 @@ footer p{margin:0 0 8px}
     </div>
 
     <p class="mut" id="status" role="status">लोड होत आहे…</p>
+
+    <!-- FIX 7: JavaScript बंद असेल तर "लोड होत आहे…" कायम दिसत राहायचं, आता योग्य संदेश दिसेल -->
+    <noscript><p class="mut" style="text-align:center">रूम पाहण्यासाठी JavaScript चालू करा.</p></noscript>
   </div>
 </section>
 
@@ -808,11 +819,7 @@ footer p{margin:0 0 8px}
       आणि विद्यार्थी तुमच्याशी थेट संपर्क साधतील. जास्त लोकांपर्यंत पोहोचण्यासाठी
       Featured साठी विनंती करता येते.
     </p>
-
-    <!-- घरमालक विभागातील दुसरे बटण -->
-    <button type="button" id="addBtn2" class="btn">
-      रूम भाड्याने द्या
-    </button>
+    <button type="button" id="addBtn2" class="btn">रूम भाड्याने द्या</button>
   </div>
 </section>
 
@@ -869,14 +876,13 @@ footer p{margin:0 0 8px}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
-
+<!-- फॉर्म बंद करण्याचा script -->
 <script>
 (function () {
   "use strict";
 
   const form = document.getElementById("form");
   const mainButton = document.getElementById("addBtn");
-  const ownerButton = document.getElementById("addBtn2");
   const closeButton = document.getElementById("closeFormBtn");
 
   if (!form || !closeButton) return;
@@ -884,47 +890,45 @@ footer p{margin:0 0 8px}
   function setFormState(open) {
     form.classList.toggle("hide", !open);
     form.setAttribute("aria-hidden", open ? "false" : "true");
-
-    if (open) {
-      requestAnimationFrame(() => {
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        const firstInput = document.getElementById("f_city");
-        if (firstInput) {
-          setTimeout(() => {
-            if (!form.classList.contains("hide")) {
-              firstInput.focus({ preventScroll: true });
-            }
-          }, 300);
-        }
-      });
-    }
   }
 
-  // '#closeFormBtn' दाबल्यावर फॉर्म नक्की बंद होईल
-  closeButton.addEventListener("click", (event) => {
+  // "बंद करा" दाबल्यावर फॉर्म बंद होतो
+  closeButton.addEventListener("click", function (event) {
     event.preventDefault();
     event.stopPropagation();
     setFormState(false);
     if (mainButton) mainButton.focus({ preventScroll: true });
   });
 
-  // '#form' चा 'hide' क्लास बदलल्यावर aria-hidden व scroll/focus सुसंगत ठेवण्यासाठी
-  const observer = new MutationObserver(() => {
+  // FIX 8: आधी observer प्रत्येक class बदलावर scroll करायचा (उदा. app.js ने दुसरी class लावली तरी).
+  // आता फक्त "लपलेला → उघडलेला" होताना एकदाच scroll आणि focus करतो.
+  let wasHidden = form.classList.contains("hide");
+
+  const observer = new MutationObserver(function () {
     const isHidden = form.classList.contains("hide");
     form.setAttribute("aria-hidden", isHidden ? "true" : "false");
-    if (!isHidden) {
-      requestAnimationFrame(() => {
+
+    if (!isHidden && wasHidden) {
+      requestAnimationFrame(function () {
         form.scrollIntoView({ behavior: "smooth", block: "start" });
+        setTimeout(function () {
+          const firstInput = document.getElementById("f_city");
+          if (firstInput && !form.classList.contains("hide")) {
+            firstInput.focus({ preventScroll: true });
+          }
+        }, 350);
       });
     }
+    wasHidden = isHidden;
   });
 
   observer.observe(form, { attributes: true, attributeFilter: ["class"] });
 
-  // सुरुवातीला फॉर्म बंद ठेवा
+  // सुरुवातीला फॉर्म बंद
   setFormState(false);
 })();
 </script>
+
 <script src="config.js"></script>
 <script src="app.js"></script>
 
