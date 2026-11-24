@@ -771,8 +771,7 @@ async function postRoom() {
       if (locationError) console.warn('Location save failed:', locationError);
     }
 
-    $('msg').textContent = 'रूम प्रसिद्ध झाली.';
-    ['f_city', 'f_area', 'f_college', 'f_rent', 'f_dep', 'f_desc',
+        ['f_city', 'f_area', 'f_college', 'f_rent', 'f_dep', 'f_desc',
       'f_name', 'f_phone', 'f_address', 'f_photos'].forEach(id => {
       if ($(id)) $(id).value = '';
     });
@@ -780,7 +779,25 @@ async function postRoom() {
     $('f_am').querySelectorAll('input').forEach(input => { input.checked = false; });
     S.loc = null;
     $('locMsg').textContent = '';
-    await load();
+    $('msg').textContent = '';
+
+    // फॉर्म बंद करा आणि "माझ्या रूम" वर जा
+    $('form')?.classList.add('hide');
+    S.view = 'mine';
+    S.favOnly = false;
+    if ($('favBtn')) $('favBtn').textContent = 'Saved';
+
+    // रूम आधीच save झाली आहे. load() अयशस्वी झाला तरी फोटो डिलीट होऊ नयेत,
+    // म्हणून त्याचा error वेगळा पकडला आहे.
+    try {
+      await load();
+    } catch (loadError) {
+      console.warn('Reload after post failed:', loadError);
+    }
+
+    // render() शेवटी status बदलतो, म्हणून संदेश load() नंतर लावा
+    setStatus('✔ तुमची रूम प्रसिद्ध झाली.');
+    $('rooms')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (error) {
     if (uploaded.length) {
       await sb.storage.from('room-photos').remove(uploaded);
