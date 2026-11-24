@@ -5,58 +5,287 @@
 <title>Admin – Room Finder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f1b2a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="room-status.css">
 <style>
-:root{color-scheme:light;--ink:#12202f;--mut:#566474;--paper:#f4f6f8;--card:#fff;--bd:#d9e0e7;--pri:#0e5a8a;--pri-d:#0a4568;--saf:#8a5a00;--saf-bg:#fff2d4;--bad:#a52a2a}
+:root{
+  color-scheme:light;
+  --ink:#16222f;
+  --mut:#5b6877;
+  --paper:#f2f5f8;
+  --card:#ffffff;
+  --bd:#dbe2ea;
+  --bd-s:#c5cfda;
+  --navy:#0f1b2a;
+  --navy-2:#182a3f;
+  --pri:#0e5a8a;
+  --pri-d:#0a4568;
+  --pri-l:#e7f1f8;
+  --saf:#8a5a00;
+  --saf-bg:#fff2d4;
+  --bad:#b3261e;
+  --bad-bg:#fdecea;
+  --r:10px;
+  --sh:0 1px 2px rgba(16,32,48,.06),0 4px 14px rgba(16,32,48,.05);
+}
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.6 "Mukta",system-ui,sans-serif}
-.wrap{max-width:1000px;margin:0 auto;padding:0 18px}
-header{background:var(--ink);color:#fff}
-.bar{display:flex;justify-content:space-between;align-items:center;min-height:60px;gap:10px;flex-wrap:wrap}
-.brand{font-weight:700;font-size:1.1rem}.brand small{font-weight:400;color:#9fb3c5;margin-left:8px}
-.who{display:flex;gap:10px;align-items:center;font-size:.9rem;color:#c9d6e2}
-.who a{color:#fff}
-input,select{padding:10px 12px;border:1px solid var(--bd);border-radius:7px;background:#fff;color:var(--ink);font:inherit}
-input:focus,select:focus,button:focus-visible,a:focus-visible{outline:3px solid #7fb4d8;outline-offset:1px}
-button,.btn{background:var(--pri);color:#fff;border:1px solid var(--pri);border-radius:7px;padding:8px 14px;font:600 .92rem "Mukta",sans-serif;cursor:pointer;text-decoration:none;display:inline-block}
-button:hover{background:var(--pri-d)}button:disabled{opacity:.6}
-.ghost{background:#fff;color:var(--pri);border-color:var(--bd)}.ghost:hover{background:#eef3f7}
-.danger{background:#fff;color:var(--bad);border-color:#e5c3c3}.danger:hover{background:#fbeeee}
+h1,h2,h3{line-height:1.3}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
 .hide{display:none!important}
-.center{max-width:420px;margin:12vh auto;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:28px}
-.center h1{font-size:1.3rem;margin:0 0 6px}.center p{color:var(--mut);margin:0 0 18px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0 16px}
-.stat{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px}
-.stat b{display:block;font-size:1.5rem;line-height:1.2}.stat span{color:var(--mut);font-size:.88rem}
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--bd);margin-bottom:14px;flex-wrap:wrap}
-.tabs button{background:none;color:var(--mut);border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 14px}
-.tabs button.on{color:var(--ink);border-bottom-color:var(--pri)}
-.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.tools input{flex:1 1 220px}
-.item{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:10px}
-.top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .mut{color:var(--mut);font-size:.9rem}
-.tag{display:inline-block;font-size:.8rem;background:#eef2f6;color:#33414f;border-radius:5px;padding:1px 8px;margin:3px 6px 3px 0}
+
+/* ---------- Controls ---------- */
+input,select,textarea{
+  padding:9px 12px;border:1px solid var(--bd-s);border-radius:8px;
+  background:#fff;color:var(--ink);font:inherit;max-width:100%;
+  transition:border-color .15s,box-shadow .15s
+}
+input:hover,select:hover,textarea:hover{border-color:#9fb0c1}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(14,90,138,.18)
+}
+button:focus-visible,a:focus-visible{outline:3px solid #7fb4d8;outline-offset:2px}
+button,.btn{
+  background:var(--pri);color:#fff;border:1px solid var(--pri);border-radius:8px;
+  padding:8px 15px;font:600 .92rem "Mukta",sans-serif;cursor:pointer;
+  text-decoration:none;display:inline-block;line-height:1.5;
+  transition:background .15s,border-color .15s,box-shadow .15s
+}
+button:hover,.btn:hover{background:var(--pri-d);border-color:var(--pri-d)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.ghost{background:#fff;color:var(--pri);border-color:var(--bd-s)}
+.ghost:hover{background:var(--pri-l);border-color:var(--pri);color:var(--pri-d)}
+.danger{background:#fff;color:var(--bad);border-color:#e6b9b5}
+.danger:hover{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+
+/* ---------- Gate screens: loading / login / denied ---------- */
+body:has(#s_app.hide){background:var(--navy)}
+.center{max-width:420px;margin:12vh auto 0;padding:0 16px}
+.gate{
+  background:var(--card);border-radius:14px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.35)
+}
+.gate-top{
+  background:linear-gradient(135deg,var(--navy-2),#12314c);
+  color:#fff;padding:26px 28px 22px;text-align:left;
+  display:flex;align-items:center;gap:14px
+}
+.gate-mark{
+  width:46px;height:46px;flex:none;border-radius:11px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  display:grid;place-items:center
+}
+.gate-mark svg{width:26px;height:26px}
+.gate-top b{display:block;font-size:1.1rem;line-height:1.3}
+.gate-top span{font-size:.88rem;color:#a9bccd}
+.gate-body{padding:26px 28px 28px}
+.gate-body h1{font-size:1.35rem;margin:0 0 6px}
+.gate-body p{margin:0 0 20px;color:var(--mut)}
+.gate-body #deniedWho{color:var(--ink);font-weight:700;word-break:break-all}
+.gate-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:12px 16px;font-size:1rem;border-radius:9px
+}
+.gate-btn svg{width:20px;height:20px;flex:none}
+.gate-row{display:flex;gap:10px}
+.gate-row>*{flex:1 1 0;text-align:center;padding:11px 14px}
+.gate-foot{
+  padding:13px 28px;background:#f6f8fb;border-top:1px solid var(--bd);
+  color:var(--mut);font-size:.82rem;display:flex;align-items:center;gap:8px
+}
+.gate-foot svg{width:15px;height:15px;flex:none}
+.gate-load{padding:38px 28px;text-align:center;color:var(--mut)}
+.spin{
+  width:26px;height:26px;margin:0 auto 12px;border-radius:50%;
+  border:3px solid var(--bd);border-top-color:var(--pri);animation:spin .8s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- App header ---------- */
+header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.bar{display:flex;justify-content:space-between;align-items:center;min-height:62px;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+.brand-mark{
+  width:32px;height:32px;border-radius:8px;background:var(--pri);
+  display:grid;place-items:center;flex:none
+}
+.brand-mark svg{width:19px;height:19px}
+.brand small{
+  font-weight:600;font-size:.76rem;color:#cfe3f2;background:rgba(255,255,255,.12);
+  padding:1px 9px;border-radius:99px;margin-left:2px
+}
+.who{display:flex;gap:12px;align-items:center;font-size:.9rem;color:#c3d1de;flex-wrap:wrap}
+.who #who{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who a{color:#fff;text-decoration:none;font-weight:600}
+.who a:hover{text-decoration:underline}
+.who .ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.35);padding:6px 13px}
+.who .ghost:hover{background:rgba(255,255,255,.12);border-color:#fff;color:#fff}
+
+/* ---------- Stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:24px 0 18px}
+.stat{
+  background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
+  padding:14px 16px;box-shadow:var(--sh);border-top:3px solid var(--pri)
+}
+.stat:nth-child(2){border-top-color:#2c8a5a}
+.stat:nth-child(3){border-top-color:#c58a12}
+.stat:nth-child(4){border-top-color:#8a56b8}
+.stat:nth-child(5){border-top-color:#c44b4b}
+.stat b{display:block;font-size:1.65rem;line-height:1.25;color:var(--ink)}
+.stat span{color:var(--mut);font-size:.88rem}
+
+/* ---------- Tabs ---------- */
+.tabs{
+  display:flex;gap:4px;margin-bottom:16px;padding:4px;
+  background:#e7ecf1;border-radius:11px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none
+}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{
+  flex:0 0 auto;background:transparent;color:var(--mut);border:0;border-radius:8px;
+  padding:8px 15px;white-space:nowrap
+}
+.tabs button:hover{background:rgba(255,255,255,.7);color:var(--ink)}
+.tabs button.on{background:#fff;color:var(--pri-d);box-shadow:0 1px 3px rgba(16,32,48,.14)}
+
+/* ---------- Search tools ---------- */
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.tools input{flex:1 1 240px}
+.tools select{flex:0 1 200px}
+
+/* ---------- Items ---------- */
+.item{
+  background:var(--card);border:1px solid var(--bd);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:12px;box-shadow:var(--sh)
+}
+.item:hover{border-color:var(--bd-s)}
+.item strong{font-weight:700}
+.top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.tag{
+  display:inline-block;font-size:.78rem;background:#edf1f5;color:#33414f;
+  border-radius:6px;padding:1px 9px;margin:3px 6px 3px 0;font-weight:500
+}
 .feat{background:var(--saf-bg);color:var(--saf);font-weight:600}
-.item label{display:block;margin:10px 0 4px;font-size:.9rem;color:var(--mut)}
-.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-#note{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;max-width:90vw}
+.item label{display:block;margin:12px 0 4px;font-size:.88rem;color:var(--mut);font-weight:600}
+.item input,.item select,.item textarea{max-width:100%}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #edf1f5}
+#list:empty:before{
+  content:"येथे काहीही नाही.";display:block;text-align:center;
+  color:var(--mut);padding:36px 12px;background:var(--card);
+  border:1px dashed var(--bd-s);border-radius:var(--r)
+}
+
+/* ---------- Toast ---------- */
+#note{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:60;
+  background:var(--navy);color:#fff;padding:11px 18px;border-radius:9px;
+  max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.3);font-weight:500;
+  animation:toast .2s ease-out
+}
+@keyframes toast{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* ---------- Mobile ---------- */
+@media(max-width:640px){
+  .wrap{padding:0 14px}
+  .center{margin-top:7vh}
+  .gate-top,.gate-body,.gate-foot{padding-left:20px;padding-right:20px}
+  .bar{padding-top:8px;padding-bottom:8px}
+  .who{width:100%;justify-content:space-between}
+  .who #who{max-width:55vw}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0 14px}
+  .stat{padding:11px 12px}
+  .stat b{font-size:1.35rem}
+  .item{padding:14px}
+  .acts>*{flex:1 1 auto;text-align:center}
+  .tools select{flex:1 1 100%}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
 </style>
 </head>
 <body>
-<section id="s_loading" class="center"><p>लोड होत आहे…</p></section>
+
+<section id="s_loading" class="center">
+  <div class="gate">
+    <div class="gate-load">
+      <div class="spin" aria-hidden="true"></div>
+      <p style="margin:0">लोड होत आहे…</p>
+    </div>
+  </div>
+</section>
+
 <section id="s_login" class="center hide">
-  <h1>Admin login</h1><p>हे पान फक्त अधिकृत व्यवस्थापकांसाठी आहे. तुमच्या Google खात्याने login करा.</p>
-  <button id="loginBtn">Google ने login करा</button>
+  <div class="gate">
+    <div class="gate-top">
+      <div class="gate-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>
+        </svg>
+      </div>
+      <div>
+        <b data-brand>Room Finder</b>
+        <span>व्यवस्थापक पोर्टल</span>
+      </div>
+    </div>
+    <div class="gate-body">
+      <h1>Admin login</h1>
+      <p>हे पान फक्त अधिकृत व्यवस्थापकांसाठी आहे. तुमच्या Google खात्याने login करा.</p>
+      <button id="loginBtn" class="gate-btn">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#fff" d="M21.35 11.1H12v2.98h5.35c-.23 1.4-1.6 4.1-5.35 4.1a6 6 0 1 1 0-12c1.9 0 3.17.8 3.9 1.5l2.66-2.57C17.9 3.5 15.2 2.4 12 2.4a9.6 9.6 0 1 0 0 19.2c5.54 0 9.2-3.9 9.2-9.38 0-.63-.07-1.1-.15-1.12z"/>
+        </svg>
+        Google ने login करा
+      </button>
+    </div>
+    <div class="gate-foot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>
+      सुरक्षित प्रवेश, फक्त अधिकृत खात्यांसाठी
+    </div>
+  </div>
 </section>
+
 <section id="s_denied" class="center hide">
-  <h1>प्रवेश नाही</h1><p><span id="deniedWho"></span> या खात्याला admin अधिकार नाहीत. योग्य खात्याने login करा.</p>
-  <button class="ghost" id="logoutBtn2">Logout</button> <a class="btn ghost" href="./">वेबसाइटवर जा</a>
+  <div class="gate">
+    <div class="gate-top">
+      <div class="gate-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>
+        </svg>
+      </div>
+      <div>
+        <b data-brand>Room Finder</b>
+        <span>व्यवस्थापक पोर्टल</span>
+      </div>
+    </div>
+    <div class="gate-body">
+      <h1>प्रवेश नाही</h1>
+      <p><span id="deniedWho"></span> या खात्याला admin अधिकार नाहीत. योग्य खात्याने login करा.</p>
+      <div class="gate-row">
+        <button class="ghost" id="logoutBtn2">Logout</button>
+        <a class="btn ghost" href="./">वेबसाइटवर जा</a>
+      </div>
+    </div>
+  </div>
 </section>
+
 <div id="s_app" class="hide">
   <header><div class="wrap bar">
-    <div class="brand"><span data-brand>Room Finder</span><small>Admin</small></div>
+    <div class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>
+        </svg>
+      </span>
+      <span data-brand>Room Finder</span><small>Admin</small>
+    </div>
     <div class="who"><span id="who"></span><a href="./">वेबसाइट पहा</a><button class="ghost" id="logoutBtn">Logout</button></div>
   </div></header>
   <main class="wrap">
