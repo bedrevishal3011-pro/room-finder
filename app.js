@@ -541,7 +541,7 @@ function card(room, distance) {
       addLink('Call', 'btn ghost', 'tel:+' + phoneDigits);
     }
 
-    if (room.featured && location) {
+    if (location && (room.featured || paymentOff)) {
       addLink(
         'Maps वर पहा',
         'btn ghost',
